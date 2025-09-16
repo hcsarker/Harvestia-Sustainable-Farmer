@@ -25,7 +25,7 @@ serve(async (req) => {
     const { action, quizId, answers, questionId, answer } = await req.json()
 
     switch (action) {
-      case 'getQuiz':
+      case 'getQuiz': {
         // Get quiz info
         const { data: quiz } = await supabaseClient
           .from('quizzes')
@@ -46,8 +46,9 @@ serve(async (req) => {
           JSON.stringify({ quiz: quizWithQuestions }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
         )
+      }
 
-      case 'submitQuiz':
+      case 'submitQuiz': {
         // Use the secure server function to validate answers
         const { data: result, error } = await supabaseClient
           .rpc('submit_quiz_results', {
@@ -63,8 +64,9 @@ serve(async (req) => {
           JSON.stringify({ result }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
         )
+      }
 
-      case 'validateAnswer':
+      case 'validateAnswer': {
         // Validate single answer (useful for immediate feedback)
         const { data: isCorrect, error: validationError } = await supabaseClient
           .rpc('validate_quiz_answer', {
@@ -80,6 +82,7 @@ serve(async (req) => {
           JSON.stringify({ isCorrect }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
         )
+      }
 
       default:
         throw new Error('Invalid action')

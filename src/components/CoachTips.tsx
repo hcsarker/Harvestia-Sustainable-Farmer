@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { X, Lightbulb, TrendingUp, AlertTriangle, CheckCircle, ChevronRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import type { Decision } from '@/shared/simulation/types'
 
 interface CoachTip {
   id: string
@@ -21,7 +22,7 @@ interface CoachTipsProps {
   gameData: {
     soilMoisture: number
     weatherForecast: string[]
-    recentDecisions: any[]
+    recentDecisions: Decision[]
     performance: {
       yield: number
       efficiency: number

@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react'
-import Map, { MapRef } from 'react-map-gl/maplibre'
+import maplibregl, { Map as MapLibreMap } from 'maplibre-gl'
 import DeckGL from '@deck.gl/react'
 import { TileLayer } from '@deck.gl/geo-layers'
 import { BitmapLayer } from '@deck.gl/layers'
@@ -88,10 +88,11 @@ export const AgricultureMap: React.FC<AgricultureMapProps> = ({
   selectedLocation,
   nasaLayers = []
 }) => {
-  const mapRef = useRef<MapRef>(null)
+  const mapContainerRef = useRef<HTMLDivElement | null>(null)
+  const mapRef = useRef<MapLibreMap | null>(null)
   const [layers, setLayers] = useState<LayerConfig[]>(NASA_LAYERS)
   const [showLegend, setShowLegend] = useState(true)
-  const [hoverInfo, setHoverInfo] = useState<any>(null)
+  const [hoverInfo, setHoverInfo] = useState<{ coordinate?: [number, number]; object?: unknown } | null>(null)
   
   const toggleLayer = useCallback((layerId: string) => {
     setLayers(prev => 
@@ -113,7 +114,7 @@ export const AgricultureMap: React.FC<AgricultureMapProps> = ({
     )
   }, [])
 
-  const handleMapClick = useCallback((event: any) => {
+  const handleMapClick = useCallback((event: { coordinate?: [number, number] }) => {
     if (onLocationSelect && event.coordinate) {
       const [lng, lat] = event.coordinate
       onLocationSelect(lat, lng)
@@ -132,7 +133,7 @@ export const AgricultureMap: React.FC<AgricultureMapProps> = ({
         minZoom: 1,
         maxZoom: 10,
         opacity: layer.opacity,
-        renderSubLayers: (props: any) => {
+        renderSubLayers: (props: { data: HTMLImageElement; tile: { bbox: { west: number; south: number; east: number; north: number } } }) => {
           return new BitmapLayer({
             ...props,
             data: undefined,
@@ -145,18 +146,35 @@ export const AgricultureMap: React.FC<AgricultureMapProps> = ({
             ]
           })
         },
-        onHover: (info: any) => setHoverInfo(info)
+        onHover: (info: { coordinate?: [number, number]; object?: unknown }) => setHoverInfo(info)
       })
     )
+
+  useEffect(() => {
+    if (mapRef.current || !mapContainerRef.current) return
+    mapRef.current = new maplibregl.Map({
+      container: mapContainerRef.current,
+      style: 'https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json',
+      center: [INITIAL_VIEW_STATE.longitude, INITIAL_VIEW_STATE.latitude],
+      zoom: INITIAL_VIEW_STATE.zoom,
+      pitch: INITIAL_VIEW_STATE.pitch,
+      bearing: INITIAL_VIEW_STATE.bearing,
+      attributionControl: false
+    })
+    return () => {
+      mapRef.current?.remove()
+      mapRef.current = null
+    }
+  }, [])
 
   return (
     <div className="relative w-full h-full bg-muted/10 rounded-lg overflow-hidden">
       <DeckGL
-        initialViewState={INITIAL_VIEW_STATE as any}
+        initialViewState={INITIAL_VIEW_STATE}
         controller={true}
         layers={deckLayers}
         onClick={handleMapClick}
-        getTooltip={({ object }: any) => 
+        getTooltip={({ object }: { object?: unknown }) => 
           hoverInfo && hoverInfo.object
             ? {
                 html: `<div class="bg-background/95 backdrop-blur-sm p-2 rounded shadow-lg border">
@@ -168,11 +186,7 @@ export const AgricultureMap: React.FC<AgricultureMapProps> = ({
             : null
         }
       >
-        <Map
-          ref={mapRef}
-          mapStyle="https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json"
-          attributionControl={false}
-        />
+        <div ref={mapContainerRef} className="absolute inset-0" />
       </DeckGL>
 
       {/* Layer Controls */}

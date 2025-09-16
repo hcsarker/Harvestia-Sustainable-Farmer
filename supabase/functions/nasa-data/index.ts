@@ -1,6 +1,9 @@
 // deno-lint-ignore-file no-explicit-any
-// @ts-ignore Deno global provided in edge runtime
+// @ts-expect-error Deno global provided in edge runtime
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+// Minimal declaration for local type-check (edge runtime provides Deno)
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+declare const Deno: any;
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -17,27 +20,117 @@ interface NASADataRequest {
   parameters?: string[]
 }
 
-Deno.serve(async (req) => {
+interface NASAPowerArgs {
+  latitude: number
+  longitude: number
+  startDate?: string
+  endDate?: string
+  parameters?: string[]
+}
+
+function toYMD(date: Date): string {
+  const y = date.getUTCFullYear()
+  const m = String(date.getUTCMonth() + 1).padStart(2, '0')
+  const d = String(date.getUTCDate()).padStart(2, '0')
+  return `${y}${m}${d}`
+}
+
+async function fetchNASAPower({ latitude, longitude, startDate, endDate, parameters }: NASAPowerArgs) {
+  const DEFAULT_PARAMS = ['T2M', 'RH2M', 'WS2M', 'ALLSKY_SFC_SW_DWN']
+  const params = (parameters && parameters.length ? parameters : DEFAULT_PARAMS).join(',')
+
+  const now = new Date()
+  const end = endDate ? new Date(endDate) : now
+  const start = startDate ? new Date(startDate) : new Date(now.getTime() - 29 * 24 * 60 * 60 * 1000)
+
+  const startYMD = toYMD(start)
+  const endYMD = toYMD(end)
+
+  const url = `https://power.larc.nasa.gov/api/temporal/daily/point?parameters=${encodeURIComponent(params)}&community=AG&longitude=${longitude}&latitude=${latitude}&start=${startYMD}&end=${endYMD}&format=JSON`
+
+  const resp = await fetch(url, { headers: { 'Accept': 'application/json' } })
+  if (!resp.ok) {
+    const text = await resp.text()
+    throw new Error(`NASA POWER request failed (${resp.status}): ${text}`)
+  }
+  const json = await resp.json() as {
+    properties?: { parameter?: Record<string, Record<string, number>> }
+    parameters?: Record<string, Record<string, number>>
+  }
+  const paramRoot: Record<string, Record<string, number>> = (json.properties?.parameter) || (json.parameters ?? {})
+
+  // Collect all date keys from the first parameter available
+  const sampleParamKey = Object.keys(paramRoot)[0]
+  const dateKeys = sampleParamKey ? Object.keys(paramRoot[sampleParamKey]) : []
+
+  const daily_data = dateKeys.map((k: string) => {
+    const dateISO = `${k.slice(0, 4)}-${k.slice(4, 6)}-${k.slice(6, 8)}`
+    const entry: Record<string, number | null | string> = { date: dateISO }
+    for (const p of (parameters && parameters.length ? parameters : DEFAULT_PARAMS)) {
+      entry[p] = (paramRoot[p] && typeof paramRoot[p][k] !== 'undefined') ? paramRoot[p][k] : null
+    }
+    return entry
+  })
+
+  return {
+    type: 'NASA_POWER_Agro',
+    latitude,
+    longitude,
+    timestamp: new Date().toISOString(),
+    parameters: (parameters && parameters.length ? parameters : DEFAULT_PARAMS),
+    data: { daily_data }
+  }
+}
+
+Deno.serve(async (req: Request) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
   }
 
   try {
+    // Lightweight health check
+    if (req.method === 'GET') {
+      const hasUrl = Boolean(Deno.env.get('SUPABASE_URL'))
+      const hasAnon = Boolean(Deno.env.get('SUPABASE_ANON_KEY'))
+      const hasService = Boolean(Deno.env.get('SUPABASE_SERVICE_ROLE_KEY'))
+      return new Response(
+        JSON.stringify({ ok: true, env: { url: hasUrl, anon: hasAnon, service: hasService } }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? ''
+      // Prefer service role for server-side privileged operations (RLS-safe), fallback to anon.
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? Deno.env.get('SUPABASE_ANON_KEY') ?? ''
     )
 
     const { dataType, location = 'global', latitude, longitude, startDate, endDate, parameters }: NASADataRequest = await req.json()
 
+    // Build cache key
+    let cacheLocationKey = location
+    if (dataType === 'NASA_POWER') {
+      const now = new Date()
+      const endD = endDate ? new Date(endDate) : now
+      const startD = startDate ? new Date(startDate) : new Date(now.getTime() - 29 * 24 * 60 * 60 * 1000)
+      const DEFAULT_PARAMS = ['T2M', 'RH2M', 'WS2M', 'ALLSKY_SFC_SW_DWN']
+      const paramList = (parameters && parameters.length ? parameters : DEFAULT_PARAMS)
+      cacheLocationKey = `lat=${latitude},lon=${longitude},start=${toYMD(startD)},end=${toYMD(endD)},params=${paramList.join(',')}`
+    }
+
     // Basic rate limiting: 60 requests per 10-minute window per anon/auth context (IP not tracked here)
     try {
+      const svcKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+      const authHeader = svcKey
+        ? `Bearer ${svcKey}`
+        : (req.headers.get('Authorization') || `Bearer ${Deno.env.get('SUPABASE_ANON_KEY')}`)
+      const apiKeyHeader = svcKey ?? (Deno.env.get('SUPABASE_ANON_KEY') ?? '')
       const rateRes = await fetch(`${Deno.env.get('SUPABASE_URL')}/rest/v1/rpc/upsert_rate`, {
         method: 'POST',
         headers: {
-          'apikey': Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-          'Authorization': req.headers.get('Authorization') || `Bearer ${Deno.env.get('SUPABASE_ANON_KEY')}`,
+          'apikey': apiKeyHeader,
+          'Authorization': authHeader,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({ resource: 'nasa-data', window_minutes: 10, p_user: null })
@@ -60,7 +153,7 @@ Deno.serve(async (req) => {
       .from('nasa_data_cache')
       .select('data')
       .eq('data_type', dataType)
-      .eq('location', location)
+      .eq('location', cacheLocationKey)
       .gte('expires_at', new Date().toISOString())
       .single()
 
@@ -71,8 +164,22 @@ Deno.serve(async (req) => {
       })
     }
 
-    // Generate realistic NASA data (in production, this would call actual NASA APIs)
-  const nasaData = generateNASAData(dataType, location, startDate, endDate, latitude, longitude, parameters)
+    // Data generation/fetch
+  let nasaData: Record<string, unknown>;
+    if (dataType === 'NASA_POWER') {
+      // Use real NASA POWER API for agro parameters
+      if (typeof latitude !== 'number' || typeof longitude !== 'number') {
+        return new Response(JSON.stringify({ error: 'latitude and longitude are required for NASA_POWER' }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        })
+      }
+
+      nasaData = await fetchNASAPower({ latitude, longitude, startDate, endDate, parameters })
+    } else {
+      // Synthetic demo data for other types (placeholder)
+      nasaData = generateNASAData(dataType, location, startDate, endDate, latitude, longitude, parameters)
+    }
 
     // Cache the data
     const expiresAt = new Date()
@@ -82,7 +189,7 @@ Deno.serve(async (req) => {
       .from('nasa_data_cache')
       .upsert({
         data_type: dataType,
-        location: location,
+        location: cacheLocationKey,
         data: nasaData,
         expires_at: expiresAt.toISOString()
       })
@@ -93,9 +200,10 @@ Deno.serve(async (req) => {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     })
 
-  } catch (error) {
-    console.error('NASA Data API Error:', error)
-    return new Response(JSON.stringify({ error: error.message }), {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error)
+    console.error('NASA Data API Error:', message)
+    return new Response(JSON.stringify({ error: message }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     })
@@ -286,30 +394,16 @@ function generateNASAData(dataType: string, location: string, startDate?: string
       }
 
     case 'NASA_POWER': {
-      // NASA Prediction of Worldwide Energy Resource
+      // Handled by fetchNASAPower for real data; fallback synthetic retained above
       const requestedParams = parameters || ['T2M', 'RH2M', 'WS2M', 'ALLSKY_SFC_SW_DWN']
       return {
         type: 'NASA_POWER_Agro',
-        location: location,
+        location,
         latitude: latitude || 0,
         longitude: longitude || 0,
         timestamp: now.toISOString(),
         parameters: requestedParams,
-        data: {
-          daily_data: Array.from({ length: 30 }, (_, i) => ({
-            date: new Date(thirtyDaysAgo.getTime() + i * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-            T2M: 20 + Math.random() * 15,
-            RH2M: 30 + Math.random() * 50,
-            WS2M: Math.random() * 8,
-            ALLSKY_SFC_SW_DWN: 10 + Math.random() * 30,
-            ET0: 2 + Math.random() * 6
-          })),
-          agro_indices: {
-            growing_degree_days: 800 + Math.random() * 1200,
-            frost_days: Math.floor(Math.random() * 30),
-            heat_stress_days: Math.floor(Math.random() * 20)
-          }
-        }
+        data: { daily_data: [] }
       }
     }
 

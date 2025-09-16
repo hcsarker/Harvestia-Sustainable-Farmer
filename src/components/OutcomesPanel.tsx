@@ -269,7 +269,10 @@ export const OutcomesPanel: React.FC<OutcomesPanelProps> = ({
                     border: '1px solid hsl(var(--border))',
                     borderRadius: '6px'
                   }}
-                  formatter={(value: any) => [`$${value.toLocaleString()}`, '']}
+                  formatter={(value: number | string) => {
+                    const num = typeof value === 'number' ? value : Number(value)
+                    return [`$${Number.isFinite(num) ? num.toLocaleString() : String(value)}`, '']
+                  }}
                 />
                 <Bar dataKey="value" fill={CHART_COLORS.primary} />
               </BarChart>

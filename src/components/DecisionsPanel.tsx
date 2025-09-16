@@ -18,16 +18,7 @@ import {
   Clock
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-
-interface Decision {
-  id: string
-  type: 'irrigation' | 'fertilizer' | 'livestock'
-  title: string
-  status: 'pending' | 'scheduled' | 'completed'
-  impact: 'low' | 'medium' | 'high'
-  cost: number
-  week: number
-}
+import type { Decision } from '@/shared/simulation/types'
 
 interface DecisionsPanelProps {
   currentWeek: number
@@ -164,7 +155,10 @@ export const DecisionsPanel: React.FC<DecisionsPanelProps> = ({
             <div className="space-y-4 p-4 border rounded-lg">
               <div>
                 <Label className="text-sm font-medium">Irrigation Method</Label>
-                <Select value={irrigationMethod} onValueChange={(value: any) => setIrrigationMethod(value)}>
+                <Select
+                  value={irrigationMethod}
+                  onValueChange={(value: 'fixed' | 'soil-trigger' | 'deficit') => setIrrigationMethod(value)}
+                >
                   <SelectTrigger className="mt-2">
                     <SelectValue />
                   </SelectTrigger>

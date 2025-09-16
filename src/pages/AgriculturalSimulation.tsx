@@ -11,6 +11,8 @@ import { SimulationTimeline } from '@/components/SimulationTimeline'
 import { DecisionsPanel } from '@/components/DecisionsPanel'
 import { OutcomesPanel } from '@/components/OutcomesPanel'
 import { CoachTips } from '@/components/CoachTips'
+import type { Decision } from '@/shared/simulation/types'
+import NASAPowerChart from '@/components/NASAPowerChart'
 import { useNASAData } from '@/hooks/useNASAData'
 import { useToast } from '@/hooks/use-toast'
 import { 
@@ -25,6 +27,19 @@ import {
   Globe
 } from 'lucide-react'
 
+interface OutcomeData {
+  yield: number
+  targetYield: number
+  soilMoisture: number
+  etGap: number
+  nitrogenLeached: number
+  totalScore: number
+  weeklyData: Array<{ week: number; yield: number; moisture: number; et: number; nitrogen: number }>
+  costs: { irrigation: number; fertilizer: number; total: number } & Record<string, number>
+  revenue: number
+  profit: number
+}
+
 interface GameState {
   mode: 'sandbox' | 'drought' | 'monsoon'
   crop: 'wheat' | 'rice' | 'maize'
@@ -34,8 +49,8 @@ interface GameState {
   isPlaying: boolean
   playbackSpeed: number
   budget: number
-  decisions: any[]
-  outcomeData: any
+  decisions: Decision[]
+  outcomeData: OutcomeData
   weatherForecast: string[]
 }
 
@@ -195,10 +210,12 @@ export const AgriculturalSimulation = () => {
     }
   }, [nasaData, toast])
 
-  const handleDecisionMake = useCallback((decision: any) => {
+  const handleDecisionMake = useCallback((decision: Decision) => {
     setGameState(prev => {
       const newCosts = { ...prev.outcomeData.costs }
-      newCosts[decision.type] += decision.cost
+      // Ensure we don't add to undefined which would produce NaN
+      const existing = (newCosts as Record<string, number>)[decision.type] || 0
+      ;(newCosts as Record<string, number>)[decision.type] = existing + decision.cost
       newCosts.total += decision.cost
       
       return {
@@ -411,6 +428,11 @@ export const AgriculturalSimulation = () => {
                 />
               </CardContent>
             </Card>
+
+            <NASAPowerChart
+              latitude={gameState.location?.lat}
+              longitude={gameState.location?.lng}
+            />
 
             <SimulationTimeline
               currentWeek={gameState.currentWeek}

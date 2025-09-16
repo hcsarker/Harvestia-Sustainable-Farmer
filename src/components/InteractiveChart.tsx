@@ -22,7 +22,7 @@ import { TrendingUp, TrendingDown, BarChart3, PieChart as PieIcon, Activity } fr
 interface InteractiveChartProps {
   title: string
   description?: string
-  data: any[]
+  data: Array<Record<string, unknown>>
   type?: 'line' | 'bar' | 'pie'
   xKey: string
   yKey: string
@@ -48,7 +48,7 @@ export function InteractiveChart({
   showControls = true
 }: InteractiveChartProps) {
   const [chartType, setChartType] = useState<'line' | 'bar' | 'pie'>(type)
-  const [hoveredData, setHoveredData] = useState<any>(null)
+  const [hoveredData, setHoveredData] = useState<unknown>(null)
 
   const renderChart = () => {
     switch (chartType) {
@@ -162,9 +162,9 @@ export function InteractiveChart({
 
   const calculateTrend = () => {
     if (data.length < 2) return null
-    const lastValue = data[data.length - 1][yKey]
-    const previousValue = data[data.length - 2][yKey]
-    const change = ((lastValue - previousValue) / previousValue) * 100
+  const lastValue = Number((data[data.length - 1] as Record<string, unknown>)[yKey] as number)
+  const previousValue = Number((data[data.length - 2] as Record<string, unknown>)[yKey] as number)
+  const change = previousValue !== 0 ? ((lastValue - previousValue) / previousValue) * 100 : 0
     return {
       value: Math.abs(change).toFixed(1),
       isPositive: change > 0

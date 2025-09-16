@@ -1,3 +1,20 @@
+// Shared simulation-related types
+
+export type DecisionType = 'irrigation' | 'fertilizer' | 'livestock'
+
+export type DecisionStatus = 'pending' | 'scheduled' | 'completed'
+
+export type DecisionImpact = 'low' | 'medium' | 'high'
+
+export interface Decision {
+  id: string
+  type: DecisionType
+  title: string
+  status: DecisionStatus
+  impact: DecisionImpact
+  cost: number
+  week: number
+}
 // Core domain types for simulation logic (shared by web + mobile)
 
 export type CropType = 'wheat' | 'rice' | 'maize'

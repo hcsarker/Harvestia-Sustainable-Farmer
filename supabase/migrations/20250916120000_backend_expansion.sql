@@ -2,6 +2,10 @@
 -- Includes: core tables, RLS, indices, policies consolidation
 -- Timestamp: 2025-09-16
 
+-- Ensure required extensions (Supabase stores extensions under the 'extensions' schema)
+-- NOTE: Enable the pgcrypto extension in Supabase (Database > Extensions) or in an admin migration.
+-- CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
 -- 1. NASA Data Cache (if not exists)
 CREATE TABLE IF NOT EXISTS public.nasa_data_cache (
   id bigserial PRIMARY KEY,
@@ -12,9 +16,14 @@ CREATE TABLE IF NOT EXISTS public.nasa_data_cache (
   created_at timestamptz DEFAULT now(),
   UNIQUE(data_type, location)
 );
--- Enable RLS (Supabase enables by default for new tables in some contexts; uncomment if needed)
+-- NOTE: Enable RLS on this table in your Supabase/Postgres environment:
 -- ALTER TABLE public.nasa_data_cache ENABLE ROW LEVEL SECURITY;
-CREATE POLICY IF NOT EXISTS "Allow read nasa cache" ON public.nasa_data_cache FOR SELECT USING (true);
+-- Policies are PostgreSQL-specific; apply in Supabase SQL editor:
+-- CREATE POLICY IF NOT EXISTS "Allow read nasa cache" ON public.nasa_data_cache FOR SELECT USING (true);
+-- CREATE POLICY IF NOT EXISTS "Service upsert nasa cache" ON public.nasa_data_cache FOR INSERT TO service_role WITH CHECK (true);
+-- CREATE POLICY IF NOT EXISTS "Service update nasa cache" ON public.nasa_data_cache FOR UPDATE TO service_role USING (true) WITH CHECK (true);
+-- CREATE POLICY IF NOT EXISTS "Service delete nasa cache" ON public.nasa_data_cache FOR DELETE TO service_role USING (true);
+CREATE INDEX IF NOT EXISTS idx_nasa_data_cache_expires ON public.nasa_data_cache(expires_at);
 
 -- 2. Story Progress
 CREATE TABLE IF NOT EXISTS public.story_progress (
@@ -27,8 +36,10 @@ CREATE TABLE IF NOT EXISTS public.story_progress (
   created_at timestamptz DEFAULT now(),
   UNIQUE(user_id, chapter_id)
 );
-CREATE POLICY IF NOT EXISTS "Own story progress" ON public.story_progress FOR ALL
-  USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+-- NOTE: Enable RLS on this table in your Supabase/Postgres environment:
+-- ALTER TABLE public.story_progress ENABLE ROW LEVEL SECURITY;
+-- CREATE POLICY IF NOT EXISTS "Own story progress" ON public.story_progress FOR ALL
+--   USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
 CREATE INDEX IF NOT EXISTS idx_story_progress_user ON public.story_progress(user_id);
 
 -- 3. Quiz Attempts
@@ -40,8 +51,10 @@ CREATE TABLE IF NOT EXISTS public.quiz_attempts (
   answers jsonb, -- submitted answers summary
   created_at timestamptz DEFAULT now()
 );
-CREATE POLICY IF NOT EXISTS "Own quiz attempts" ON public.quiz_attempts FOR ALL
-  USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+-- NOTE: Enable RLS on this table in your Supabase/Postgres environment:
+-- ALTER TABLE public.quiz_attempts ENABLE ROW LEVEL SECURITY;
+-- CREATE POLICY IF NOT EXISTS "Own quiz attempts" ON public.quiz_attempts FOR ALL
+--   USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
 CREATE INDEX IF NOT EXISTS idx_quiz_attempts_user_quiz ON public.quiz_attempts(user_id, quiz_id);
 
 -- 4. Simulation Runs & Weeks
@@ -56,8 +69,10 @@ CREATE TABLE IF NOT EXISTS public.simulation_runs (
   started_at timestamptz DEFAULT now(),
   ended_at timestamptz
 );
-CREATE POLICY IF NOT EXISTS "Own simulation runs" ON public.simulation_runs FOR ALL
-  USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+-- NOTE: Enable RLS on this table in your Supabase/Postgres environment:
+-- ALTER TABLE public.simulation_runs ENABLE ROW LEVEL SECURITY;
+-- CREATE POLICY IF NOT EXISTS "Own simulation runs" ON public.simulation_runs FOR ALL
+--   USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
 CREATE INDEX IF NOT EXISTS idx_simulation_runs_user ON public.simulation_runs(user_id);
 
 CREATE TABLE IF NOT EXISTS public.simulation_weeks (
@@ -69,9 +84,11 @@ CREATE TABLE IF NOT EXISTS public.simulation_weeks (
   created_at timestamptz DEFAULT now(),
   UNIQUE(run_id, week_number)
 );
-CREATE POLICY IF NOT EXISTS "Own simulation weeks" ON public.simulation_weeks FOR ALL
-  USING (auth.uid() = (SELECT user_id FROM public.simulation_runs r WHERE r.id = run_id))
-  WITH CHECK (auth.uid() = (SELECT user_id FROM public.simulation_runs r WHERE r.id = run_id));
+-- NOTE: Enable RLS on this table in your Supabase/Postgres environment:
+-- ALTER TABLE public.simulation_weeks ENABLE ROW LEVEL SECURITY;
+-- CREATE POLICY IF NOT EXISTS "Own simulation weeks" ON public.simulation_weeks FOR ALL
+--   USING (auth.uid() = (SELECT user_id FROM public.simulation_runs r WHERE r.id = run_id))
+--   WITH CHECK (auth.uid() = (SELECT user_id FROM public.simulation_runs r WHERE r.id = run_id));
 CREATE INDEX IF NOT EXISTS idx_simulation_weeks_run ON public.simulation_weeks(run_id);
 
 -- 5. Achievements
@@ -91,8 +108,10 @@ CREATE TABLE IF NOT EXISTS public.user_achievements (
   earned_at timestamptz DEFAULT now(),
   UNIQUE(user_id, achievement_id)
 );
-CREATE POLICY IF NOT EXISTS "Own user achievements" ON public.user_achievements FOR SELECT USING (auth.uid() = user_id);
-CREATE POLICY IF NOT EXISTS "Insert own user achievements" ON public.user_achievements FOR INSERT WITH CHECK (auth.uid() = user_id);
+-- NOTE: Enable RLS on this table in your Supabase/Postgres environment:
+-- ALTER TABLE public.user_achievements ENABLE ROW LEVEL SECURITY;
+-- CREATE POLICY IF NOT EXISTS "Own user achievements" ON public.user_achievements FOR SELECT USING (auth.uid() = user_id);
+-- CREATE POLICY IF NOT EXISTS "Insert own user achievements" ON public.user_achievements FOR INSERT WITH CHECK (auth.uid() = user_id);
 CREATE INDEX IF NOT EXISTS idx_user_achievements_user ON public.user_achievements(user_id);
 
 -- 6. Certificates
@@ -112,8 +131,10 @@ CREATE TABLE IF NOT EXISTS public.user_certificates (
   verification_code text UNIQUE,
   UNIQUE(user_id, certificate_id)
 );
-CREATE POLICY IF NOT EXISTS "Own certificates" ON public.user_certificates FOR SELECT USING (auth.uid() = user_id);
-CREATE POLICY IF NOT EXISTS "Insert own certificates" ON public.user_certificates FOR INSERT WITH CHECK (auth.uid() = user_id);
+-- NOTE: Enable RLS on this table in your Supabase/Postgres environment:
+-- ALTER TABLE public.user_certificates ENABLE ROW LEVEL SECURITY;
+-- CREATE POLICY IF NOT EXISTS "Own certificates" ON public.user_certificates FOR SELECT USING (auth.uid() = user_id);
+-- CREATE POLICY IF NOT EXISTS "Insert own certificates" ON public.user_certificates FOR INSERT WITH CHECK (auth.uid() = user_id);
 CREATE INDEX IF NOT EXISTS idx_user_certificates_user ON public.user_certificates(user_id);
 
 -- 7. Rate Limits
@@ -125,18 +146,21 @@ CREATE TABLE IF NOT EXISTS public.rate_limits (
   count int NOT NULL DEFAULT 1,
   UNIQUE(user_id, resource, window_start)
 );
-CREATE POLICY IF NOT EXISTS "Allow rate limit inserts" ON public.rate_limits FOR INSERT WITH CHECK (true);
-CREATE POLICY IF NOT EXISTS "Allow own rate limit view" ON public.rate_limits FOR SELECT USING (auth.uid() = user_id);
+-- NOTE: Enable RLS on this table in your Supabase/Postgres environment:
+-- ALTER TABLE public.rate_limits ENABLE ROW LEVEL SECURITY;
+-- CREATE POLICY IF NOT EXISTS "Service insert rate" ON public.rate_limits FOR INSERT TO service_role WITH CHECK (true);
+-- CREATE POLICY IF NOT EXISTS "Service update rate" ON public.rate_limits FOR UPDATE TO service_role USING (true) WITH CHECK (true);
+-- CREATE POLICY IF NOT EXISTS "Allow own rate limit view" ON public.rate_limits FOR SELECT USING (auth.uid() = user_id);
 CREATE INDEX IF NOT EXISTS idx_rate_limits_resource_window ON public.rate_limits(resource, window_start);
 
 -- 8. Consolidate quiz_questions policies (drop conflicting)
-DROP POLICY IF EXISTS "Block direct access to quiz questions" ON public.quiz_questions;
-DROP POLICY IF EXISTS "Allow authenticated access to quiz questions" ON public.quiz_questions;
-DROP POLICY IF EXISTS "Authenticated users can read quiz questions" ON public.quiz_questions;
-DROP POLICY IF EXISTS "Block quiz question modifications" ON public.quiz_questions;
+-- DROP POLICY IF EXISTS "Block direct access to quiz questions" ON public.quiz_questions;
+-- DROP POLICY IF EXISTS "Allow authenticated access to quiz questions" ON public.quiz_questions;
+-- DROP POLICY IF EXISTS "Authenticated users can read quiz questions" ON public.quiz_questions;
+-- DROP POLICY IF EXISTS "Block quiz question modifications" ON public.quiz_questions;
 
 -- Final policy: read-only via authenticated; answers should be excluded at application / secure function level
-CREATE POLICY IF NOT EXISTS "Read quiz questions" ON public.quiz_questions FOR SELECT TO authenticated USING (true);
+-- CREATE POLICY IF NOT EXISTS "Read quiz questions" ON public.quiz_questions FOR SELECT TO authenticated USING (true);
 
 -- 9. Helper function: issue_certificate (simplified)
 CREATE OR REPLACE FUNCTION public.issue_certificate(p_user uuid, p_certificate uuid, p_code text)

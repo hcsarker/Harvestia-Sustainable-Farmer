@@ -32,7 +32,16 @@ export default function StoryJourney() {
     }
   }, [isAuthenticated, navigate])
 
-  const [storyChapters, setStoryChapters] = useState([])
+  type ChapterStatus = 'locked' | 'current' | 'completed' | string
+  interface StoryChapter {
+    id: string
+    chapter_number: number
+    title: string
+    description: string
+    duration: string
+    status: ChapterStatus
+  }
+  const [storyChapters, setStoryChapters] = useState<StoryChapter[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -55,7 +64,7 @@ export default function StoryJourney() {
     return storyProgress.find(p => p.chapter_id === chapterId)
   }
 
-  const handleChapterAction = async (chapter: any) => {
+  const handleChapterAction = async (chapter: StoryChapter) => {
     if (chapter.status === 'locked') return
 
     if (!user && !isGuest) {
@@ -124,7 +133,7 @@ export default function StoryJourney() {
       </div>
 
       <div className="grid gap-6">
-        {storyChapters.map((chapter: any) => {
+  {storyChapters.map((chapter: StoryChapter) => {
           const userProgress = getUserProgress(chapter.id)
           const progress = userProgress?.progress || 0
           const status = userProgress?.status || chapter.status
@@ -203,3 +212,4 @@ export default function StoryJourney() {
     </div>
   )
 }
+

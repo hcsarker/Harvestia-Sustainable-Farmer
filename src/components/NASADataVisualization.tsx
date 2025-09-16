@@ -1,81 +1,101 @@
-import { useState, useEffect } from "react"
+import React from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { 
-  LineChart, 
-  Line, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
+import { useNASAData } from "@/hooks/useNASAData"
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
   ResponsiveContainer,
   BarChart,
   Bar,
   PieChart,
   Pie,
-  Cell
+  Cell,
 } from "recharts"
-import { 
-  Satellite, 
-  Droplets, 
-  ThermometerSun, 
-  Leaf,
-  BarChart3,
-  TrendingUp,
-  TrendingDown,
-  Minus
-} from "lucide-react"
-import { useNASAData } from "@/hooks/useNASAData"
+import { Leaf, Droplets, ThermometerSun, Satellite, BarChart3, TrendingUp, TrendingDown, Minus } from "lucide-react"
 
-interface NASADataVisualizationProps {
-  dataType: 'MODIS' | 'SMAP' | 'GISS' | 'OCO-2' | 'Landsat'
+export type DataType = "MODIS" | "SMAP" | "GISS" | "OCO-2" | "Landsat"
+
+interface Props {
+  dataType: DataType
   location?: string
   title: string
   description: string
 }
 
-const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8']
-
-const dataTypeConfig = {
-  MODIS: { icon: Leaf, color: 'text-green-600', bgColor: 'bg-green-100' },
-  SMAP: { icon: Droplets, color: 'text-blue-600', bgColor: 'bg-blue-100' },
-  GISS: { icon: ThermometerSun, color: 'text-orange-600', bgColor: 'bg-orange-100' },
-  'OCO-2': { icon: Satellite, color: 'text-purple-600', bgColor: 'bg-purple-100' },
-  Landsat: { icon: BarChart3, color: 'text-indigo-600', bgColor: 'bg-indigo-100' }
+// Narrow data shapes per source for safe rendering
+interface ModisData {
+  ndvi_values: Array<{ date: string; ndvi: number }>
+  average_ndvi: number
+  crop_health_score: number
+}
+interface SmapData {
+  soil_moisture_levels: Array<{ date: string; moisture_percent: number }>
+  average_moisture: number
+  drought_risk: "Low" | "Medium" | "High" | string
+}
+interface GissData {
+  temperature_data: Array<{ date: string; temp_celsius: number }>
+  climate_trend: "Warming" | "Cooling" | "Stable" | string
+  frost_risk: "High" | "Low" | "Normal" | string
+}
+interface Oco2Data {
+  co2_levels: Array<{ date: string; co2_ppm: number }>
+  carbon_sequestration_rate: number
+  sustainability_score: number
+}
+interface LandsatData {
+  land_classification: Record<string, number>
+  land_health_index: number
 }
 
-export default function NASADataVisualization({ 
-  dataType, 
-  location = 'global', 
-  title, 
-  description 
-}: NASADataVisualizationProps) {
-  const [nasaData, setNasaData] = useState<any>(null)
-  const { fetchNASAData, loading, error } = useNASAData()
+type NasaBase = { timestamp?: string; data?: unknown }
 
-  const config = dataTypeConfig[dataType]
+const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8"] as const
+
+const dataTypeConfig = {
+  MODIS: { icon: Leaf, color: "text-green-600", bgColor: "bg-green-100" },
+  SMAP: { icon: Droplets, color: "text-blue-600", bgColor: "bg-blue-100" },
+  GISS: { icon: ThermometerSun, color: "text-orange-600", bgColor: "bg-orange-100" },
+  "OCO-2": { icon: Satellite, color: "text-purple-600", bgColor: "bg-purple-100" },
+  Landsat: { icon: BarChart3, color: "text-indigo-600", bgColor: "bg-indigo-100" },
+} as const
+
+type ConfigKey = keyof typeof dataTypeConfig
+
+export default function NASADataVisualization({ dataType, location = "global", title, description }: Props) {
+  const [nasaData, setNasaData] = React.useState<NasaBase | null>(null)
+  const { fetchNASAData, loading, error } = useNASAData()
+  const config = dataTypeConfig[dataType as ConfigKey]
   const IconComponent = config.icon
 
-  useEffect(() => {
-    const loadData = async () => {
-      const data = await fetchNASAData({ dataType, location })
-      setNasaData(data)
+  React.useEffect(() => {
+    let mounted = true
+    const load = async () => {
+      const d = await fetchNASAData({ dataType, location })
+      if (mounted) setNasaData(d as NasaBase)
     }
-    loadData()
+    load()
+    return () => {
+      mounted = false
+    }
   }, [dataType, location, fetchNASAData])
 
   const renderChart = () => {
     if (!nasaData?.data) return null
-
     switch (dataType) {
-      case 'MODIS':
+      case "MODIS": {
+        const d = nasaData.data as ModisData
         return (
           <div className="space-y-4">
             <ResponsiveContainer width="100%" height={250}>
-              <LineChart data={nasaData.data.ndvi_values}>
+              <LineChart data={d.ndvi_values}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="date" />
                 <YAxis />
@@ -85,26 +105,23 @@ export default function NASADataVisualization({
             </ResponsiveContainer>
             <div className="grid grid-cols-2 gap-4">
               <div className="text-center">
-                <div className="text-2xl font-bold text-green-600">
-                  {(nasaData.data.average_ndvi * 100).toFixed(1)}%
-                </div>
+                <div className="text-2xl font-bold text-green-600">{(d.average_ndvi * 100).toFixed(1)}%</div>
                 <div className="text-sm text-muted-foreground">Vegetation Health</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-bold">
-                  {nasaData.data.crop_health_score.toFixed(0)}
-                </div>
+                <div className="text-2xl font-bold">{d.crop_health_score.toFixed(0)}</div>
                 <div className="text-sm text-muted-foreground">Health Score</div>
               </div>
             </div>
           </div>
         )
-
-      case 'SMAP':
+      }
+      case "SMAP": {
+        const d = nasaData.data as SmapData
         return (
           <div className="space-y-4">
             <ResponsiveContainer width="100%" height={250}>
-              <BarChart data={nasaData.data.soil_moisture_levels}>
+              <BarChart data={d.soil_moisture_levels}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="date" />
                 <YAxis />
@@ -114,25 +131,22 @@ export default function NASADataVisualization({
             </ResponsiveContainer>
             <div className="grid grid-cols-2 gap-4">
               <div className="text-center">
-                <div className="text-2xl font-bold text-blue-600">
-                  {nasaData.data.average_moisture.toFixed(1)}%
-                </div>
+                <div className="text-2xl font-bold text-blue-600">{d.average_moisture.toFixed(1)}%</div>
                 <div className="text-sm text-muted-foreground">Avg Moisture</div>
               </div>
               <div className="text-center">
-                <Badge variant={nasaData.data.drought_risk === 'High' ? 'destructive' : 'secondary'}>
-                  {nasaData.data.drought_risk} Risk
-                </Badge>
+                <Badge variant={d.drought_risk === "High" ? "destructive" : "secondary"}>{d.drought_risk} Risk</Badge>
               </div>
             </div>
           </div>
         )
-
-      case 'GISS':
+      }
+      case "GISS": {
+        const d = nasaData.data as GissData
         return (
           <div className="space-y-4">
             <ResponsiveContainer width="100%" height={250}>
-              <LineChart data={nasaData.data.temperature_data}>
+              <LineChart data={d.temperature_data}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="date" />
                 <YAxis />
@@ -143,31 +157,30 @@ export default function NASADataVisualization({
             <div className="grid grid-cols-2 gap-4">
               <div className="text-center">
                 <div className="flex items-center justify-center space-x-1">
-                  {nasaData.data.climate_trend === 'Warming' ? (
+                  {d.climate_trend === "Warming" ? (
                     <TrendingUp className="h-4 w-4 text-red-500" />
-                  ) : nasaData.data.climate_trend === 'Cooling' ? (
+                  ) : d.climate_trend === "Cooling" ? (
                     <TrendingDown className="h-4 w-4 text-blue-500" />
                   ) : (
                     <Minus className="h-4 w-4 text-gray-500" />
                   )}
-                  <span className="font-semibold">{nasaData.data.climate_trend}</span>
+                  <span className="font-semibold">{d.climate_trend}</span>
                 </div>
                 <div className="text-sm text-muted-foreground">Climate Trend</div>
               </div>
               <div className="text-center">
-                <Badge variant={nasaData.data.frost_risk === 'High' ? 'destructive' : 'secondary'}>
-                  {nasaData.data.frost_risk} Frost Risk
-                </Badge>
+                <Badge variant={d.frost_risk === "High" ? "destructive" : "secondary"}>{d.frost_risk} Frost Risk</Badge>
               </div>
             </div>
           </div>
         )
-
-      case 'OCO-2':
+      }
+      case "OCO-2": {
+        const d = nasaData.data as Oco2Data
         return (
           <div className="space-y-4">
             <ResponsiveContainer width="100%" height={250}>
-              <LineChart data={nasaData.data.co2_levels}>
+              <LineChart data={d.co2_levels}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="date" />
                 <YAxis />
@@ -177,27 +190,23 @@ export default function NASADataVisualization({
             </ResponsiveContainer>
             <div className="grid grid-cols-2 gap-4">
               <div className="text-center">
-                <div className="text-2xl font-bold text-purple-600">
-                  {nasaData.data.carbon_sequestration_rate.toFixed(1)}
-                </div>
+                <div className="text-2xl font-bold text-purple-600">{d.carbon_sequestration_rate.toFixed(1)}</div>
                 <div className="text-sm text-muted-foreground">Carbon Rate (t/ha/yr)</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-bold">
-                  {nasaData.data.sustainability_score.toFixed(0)}
-                </div>
+                <div className="text-2xl font-bold">{d.sustainability_score.toFixed(0)}</div>
                 <div className="text-sm text-muted-foreground">Sustainability Score</div>
               </div>
             </div>
           </div>
         )
-
-      case 'Landsat':
-        const landUseData = Object.entries(nasaData.data.land_classification).map(([key, value]) => ({
+      }
+      case "Landsat": {
+        const d = nasaData.data as LandsatData
+        const landUseData = Object.entries(d.land_classification).map(([key, value]) => ({
           name: key.charAt(0).toUpperCase() + key.slice(1),
-          value: value as number
+          value,
         }))
-
         return (
           <div className="space-y-4">
             <ResponsiveContainer width="100%" height={250}>
@@ -207,7 +216,7 @@ export default function NASADataVisualization({
                   cx="50%"
                   cy="50%"
                   labelLine={false}
-                  label={({ name, percent }: any) => `${name} ${(percent * 100).toFixed(0)}%`}
+                  label={({ name, percent }: { name: string; percent: number }) => `${name} ${(percent * 100).toFixed(0)}%`}
                   outerRadius={80}
                   fill="#8884d8"
                   dataKey="value"
@@ -220,14 +229,12 @@ export default function NASADataVisualization({
               </PieChart>
             </ResponsiveContainer>
             <div className="text-center">
-              <div className="text-2xl font-bold">
-                {nasaData.data.land_health_index.toFixed(0)}
-              </div>
+              <div className="text-2xl font-bold">{d.land_health_index.toFixed(0)}</div>
               <div className="text-sm text-muted-foreground">Land Health Index</div>
             </div>
           </div>
         )
-
+      }
       default:
         return null
     }
@@ -243,9 +250,7 @@ export default function NASADataVisualization({
           <div className="flex-1">
             <CardTitle className="flex items-center space-x-2">
               <span>{title}</span>
-              <Badge variant="outline" className="text-xs">
-                NASA {dataType}
-              </Badge>
+              <Badge variant="outline" className="text-xs">NASA {dataType}</Badge>
             </CardTitle>
             <CardDescription>{description}</CardDescription>
           </div>
@@ -261,20 +266,21 @@ export default function NASADataVisualization({
             </div>
           </div>
         )}
-        
+
         {error && (
           <Alert variant="destructive">
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         )}
-        
+
         {!loading && !error && renderChart()}
-        
+
         {!loading && !error && nasaData && (
           <div className="mt-4 pt-4 border-t">
             <div className="flex justify-between items-center text-sm text-muted-foreground">
               <span>Data Location: {location}</span>
-              <span>Last Updated: {new Date(nasaData.timestamp).toLocaleDateString()}</span>
+              <span>Last Updated: {nasaData.timestamp ? new Date(nasaData.timestamp).toLocaleDateString() : '-'}
+              </span>
             </div>
           </div>
         )}

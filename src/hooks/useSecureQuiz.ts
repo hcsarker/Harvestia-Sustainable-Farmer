@@ -14,7 +14,7 @@ interface Quiz {
 interface QuizQuestion {
   id: string
   question: string
-  options: any
+  options: string[]
   explanation: string | null
 }
 
@@ -37,7 +37,7 @@ export const useSecureQuiz = () => {
 
       if (error) throw error
       return data.quiz
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error fetching quiz:', error)
       toast({
         title: "Error",
@@ -67,7 +67,7 @@ export const useSecureQuiz = () => {
       })
 
       return result
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error submitting quiz:', error)
       toast({
         title: "Error",

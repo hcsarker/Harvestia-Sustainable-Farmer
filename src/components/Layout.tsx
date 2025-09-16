@@ -4,18 +4,26 @@ import { AuthDialog } from "./AuthDialog"
 import { FactOfTheDay } from "./FactOfTheDay"
 import { Button } from "@/components/ui/button"
 import { User } from "lucide-react"
+import { useIsFetching } from "@tanstack/react-query"
 
 interface LayoutProps {
   children: React.ReactNode
 }
 
 export function Layout({ children }: LayoutProps) {
+  const isFetching = useIsFetching()
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full">
+        {/* Top loading heartbeat */}
+        {isFetching > 0 && (
+          <div className="fixed top-0 left-0 right-0 z-[100] h-1 bg-gradient-to-r from-green-500 via-emerald-400 to-lime-400 animate-pulse" />
+        )}
         <AppSidebar />
         
         <div className="flex-1 flex flex-col">
+          {/* Spacer for fixed heartbeat (optional) */}
+          <div className="h-0" />
           {/* Header */}
           <header className="h-16 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 flex items-center px-4">
             <SidebarTrigger className="mr-4" />
