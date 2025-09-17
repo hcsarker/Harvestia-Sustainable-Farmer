@@ -98,29 +98,7 @@ const miniGames = [
   }
 ]
 
-const quizzes = [
-  {
-    id: 1,
-    title: "Soil Health Basics",
-    questions: 15,
-    difficulty: "Beginner",
-    completions: 2300
-  },
-  {
-    id: 2,
-    title: "Climate Change & Agriculture",
-    questions: 20,
-    difficulty: "Intermediate", 
-    completions: 1800
-  },
-  {
-    id: 3,
-    title: "Precision Farming Technologies",
-    questions: 25,
-    difficulty: "Advanced",
-    completions: 950
-  }
-]
+// Quizzes moved to dedicated Quizzes page
 
 export default function MiniGames() {
   const totalGames = miniGames.length;
@@ -135,7 +113,7 @@ export default function MiniGames() {
           <div>
             <h1 className="text-3xl font-bold text-foreground flex items-center">
               <Gamepad2 className="h-8 w-8 mr-3 text-primary animate-float" />
-              Mini Games & Quizzes
+              Mini Games
             </h1>
             <p className="text-muted-foreground mt-2">
               Learn through play! Test your knowledge and skills with fun interactive games
@@ -197,45 +175,6 @@ export default function MiniGames() {
           </div>
         </div>
 
-        <div>
-          <h2 className="text-xl font-semibold mb-4 flex items-center">
-            <Brain className="h-5 w-5 mr-2" />
-            Knowledge Quizzes
-          </h2>
-          <div className="grid md:grid-cols-3 gap-4">
-            {quizzes.map((quiz, index) => (
-              <Card 
-                key={quiz.id}
-                className="hover:shadow-lg transition-all duration-300 hover:scale-105 animate-fade-in"
-                style={{ animationDelay: `${index * 0.1}s` }}
-              >
-                <CardHeader>
-                  <CardTitle className="text-lg">{quiz.title}</CardTitle>
-                  <CardDescription>
-                    {quiz.questions} questions • {quiz.difficulty}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="text-sm text-muted-foreground">
-                      {quiz.completions.toLocaleString()} completions
-                    </span>
-                    <Badge variant={
-                      quiz.difficulty === 'Beginner' ? 'secondary' :
-                      quiz.difficulty === 'Intermediate' ? 'default' : 'destructive'
-                    }>
-                      {quiz.difficulty}
-                    </Badge>
-                  </div>
-                  <Button className="w-full hover:scale-105 transition-transform" size="sm">
-                    <Trophy className="h-4 w-4 mr-2" />
-                    Start Quiz
-                  </Button>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
       </div>
     </div>
   )

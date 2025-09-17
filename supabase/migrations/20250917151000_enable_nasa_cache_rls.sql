@@ -12,12 +12,19 @@
 -- Note: For production hardening, consider enabling RLS and policies instead.
 
 -- Helpful indexes
-CREATE INDEX IF NOT EXISTS idx_nasa_cache_type_loc ON public.nasa_data_cache(data_type, location);
-CREATE INDEX IF NOT EXISTS idx_nasa_cache_expires ON public.nasa_data_cache(expires_at);
+create index if not exists idx_nasa_cache_type_loc on
+   public.nasa_data_cache (
+      data_type,
+      location
+   );
+create index if not exists idx_nasa_cache_expires on
+   public.nasa_data_cache (
+      expires_at
+   );
 
 -- Allow read access to cache for anon and authenticated roles
-GRANT SELECT ON public.nasa_data_cache TO anon;
-GRANT SELECT ON public.nasa_data_cache TO authenticated;
+grant select on public.nasa_data_cache to anon;
+grant select on public.nasa_data_cache to authenticated;
 
 -- Allow maintenance by service_role
-GRANT SELECT, INSERT, UPDATE, DELETE ON public.nasa_data_cache TO service_role;
+grant select,insert,update,delete on public.nasa_data_cache to service_role;

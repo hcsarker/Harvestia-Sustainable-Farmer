@@ -117,6 +117,11 @@ Deno.serve(async (req: Request) => {
       const DEFAULT_PARAMS = ['T2M', 'RH2M', 'WS2M', 'ALLSKY_SFC_SW_DWN']
       const paramList = (parameters && parameters.length ? parameters : DEFAULT_PARAMS)
       cacheLocationKey = `lat=${latitude},lon=${longitude},start=${toYMD(startD)},end=${toYMD(endD)},params=${paramList.join(',')}`
+    } else if (dataType === 'MODIS' || dataType === 'GPM_IMERG' || dataType === 'ECOSTRESS' || dataType === 'MERRA2') {
+      // Normalize to location string when available, otherwise lat/lon
+      if (typeof latitude === 'number' && typeof longitude === 'number') {
+        cacheLocationKey = `lat=${latitude},lon=${longitude}`
+      }
     }
 
     // Basic rate limiting: 60 requests per 10-minute window per anon/auth context (IP not tracked here)

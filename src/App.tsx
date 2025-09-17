@@ -11,11 +11,15 @@ const Courses = lazy(() => import('./pages/Courses'));
 const AgriculturalSimulation = lazy(() => import('@/pages/AgriculturalSimulation').then(m => ({ default: m.AgriculturalSimulation })));
 const MiniGames = lazy(() => import('./pages/MiniGames'));
 const Facts = lazy(() => import('./pages/Facts'));
+const Quizzes = lazy(() => import('./pages/Quizzes'));
+const QuizExam = lazy(() => import('./pages/QuizExam'));
 const Profile = lazy(() => import('./pages/Profile'));
 const Certificates = lazy(() => import('./pages/Certificates'));
+const MyResults = lazy(() => import('./pages/MyResults'));
 const Auth = lazy(() => import('./pages/Auth'));
 const ResetPassword = lazy(() => import('@/pages/ResetPassword'));
 const NotFound = lazy(() => import('./pages/NotFound'));
+const AdminQuizzes = lazy(() => import('./pages/AdminQuizzes'));
 import { useAuth } from "@/hooks/useAuth";
 // Debug overlay removed per request
 
@@ -52,7 +56,11 @@ function AppContent() {
           <Route path="simulation" element={<AgriculturalSimulation />} />
           <Route path="games" element={<MiniGames />} />
           <Route path="facts" element={<Facts />} />
+          <Route path="quizzes" element={<Quizzes />} />
+          <Route path="quizzes/:quizId" element={<QuizExam />} />
+          <Route path="results" element={<MyResults />} />
           <Route path="profile" element={<Profile />} />
+          <Route path="admin/quizzes" element={<AdminQuizzes />} />
           <Route path="certificates" element={<Certificates />} />
           <Route path="*" element={<NotFound />} />
         </Route>

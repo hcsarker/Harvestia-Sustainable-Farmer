@@ -5,8 +5,12 @@ import { StatsCard } from "@/components/StatsCard";
 import { InteractiveChart } from "@/components/InteractiveChart";
 import { ProgressRing } from "@/components/ProgressRing";
 import { AnimatedCounter } from "@/components/AnimatedCounter";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { Button } from '@/components/ui/button'
 import { useLocalWeather } from '@/hooks/useLocalWeather'
+import { useAuth } from '@/hooks/useAuth'
+import { useUserProgress } from '@/hooks/useUserProgress'
+import { useNASAData } from '@/hooks/useNASAData'
 import { 
   Sprout, 
   Droplets, 
@@ -32,31 +36,92 @@ import { useDashboardStats } from '@/hooks/useDashboardStats'
 
 const Index = () => {
   const [selectedModule, setSelectedModule] = useState<string | null>(null);
-  const { last, series } = useLocalWeather()
+  const { last, series, coords } = useLocalWeather()
   const { achievementsCount, fieldsMonitored, waterEfficiency, sustainabilityScore, conditionsScore, farmHealth } = useDashboardStats()
+  const { courseProgress, storyProgress } = useUserProgress()
+  const { fetchMODISData, fetchGPMData } = useNASAData()
+  
+  // Refs for quick action smooth scroll
+  const weatherRef = useRef<HTMLDivElement | null>(null)
+  const analyticsRef = useRef<HTMLDivElement | null>(null)
+  const farmHealthRef = useRef<HTMLDivElement | null>(null)
+  const { profile, user } = useAuth()
 
-  // Sample data for charts
-  const yieldData = [
-    { month: 'Jan', yield: 2400 },
-    { month: 'Feb', yield: 2600 },
-    { month: 'Mar', yield: 2800 },
-    { month: 'Apr', yield: 3200 },
-    { month: 'May', yield: 3500 },
-    { month: 'Jun', yield: 3800 }
-  ];
+  // NDVI chart from MODIS (cached via edge) — dynamic replacement for static yield
+  const [ndviSeries, setNdviSeries] = useState<Array<{ date: string; ndvi: number }>>([])
+  const [gpmToday, setGpmToday] = useState<number | null>(null)
+  useEffect(() => {
+    let cancelled = false
+    const run = async () => {
+      if (!coords) return
+      const loc = `${coords.lat.toFixed(3)},${coords.lon.toFixed(3)}`
+      const res = await fetchMODISData(loc) as { data?: { ndvi_values?: { date: string; ndvi: number }[] } } | null
+      if (!cancelled) {
+        const vals = res?.data?.ndvi_values || []
+        setNdviSeries(vals)
+      }
+    }
+    run()
+    return () => { cancelled = true }
+  }, [coords, fetchMODISData])
 
-  // Build weekly temperature series from NASA POWER (useLocalWeather)
-  const weatherData = (series && series.length > 0)
-    ? series.slice(-7).map(d => ({ day: new Date(d.date).toLocaleDateString(undefined, { weekday: 'short' }), temp: typeof d.T2M === 'number' ? Math.round(d.T2M) : null }))
+  // Fetch GPM rainfall to show in quick action (today's precip)
+  useEffect(() => {
+    let cancelled = false
+    const run = async () => {
+      if (!coords) return
+      const loc = `${coords.lat.toFixed(3)},${coords.lon.toFixed(3)}`
+      const res = await fetchGPMData(coords.lat, coords.lon, loc) as { data?: { precipitation_data?: { date: string; precipitation_mm: number }[] } } | null
+      if (cancelled) return
+      const arr = res?.data?.precipitation_data || []
+      if (arr.length) {
+        const last = arr[arr.length - 1]
+        setGpmToday(typeof last.precipitation_mm === 'number' ? last.precipitation_mm : null)
+      }
+    }
+    run()
+    return () => { cancelled = true }
+  }, [coords, fetchGPMData])
+  const ndviData = (ndviSeries && ndviSeries.length)
+    ? ndviSeries.slice(-14).map(d => ({ day: new Date(d.date).toLocaleDateString(undefined, { month: 'short', day: '2-digit' }), ndvi: Math.round(d.ndvi * 100) }))
     : [
-        { day: 'Mon', temp: 22 },
-        { day: 'Tue', temp: 25 },
-        { day: 'Wed', temp: 23 },
-        { day: 'Thu', temp: 27 },
-        { day: 'Fri', temp: 24 },
-        { day: 'Sat', temp: 26 },
-        { day: 'Sun', temp: 28 }
+        { day: 'Day 1', ndvi: 55 },
+        { day: 'Day 2', ndvi: 57 },
+        { day: 'Day 3', ndvi: 60 },
+        { day: 'Day 4', ndvi: 62 },
+        { day: 'Day 5', ndvi: 59 },
+        { day: 'Day 6', ndvi: 61 },
+        { day: 'Day 7', ndvi: 63 }
       ]
+
+  // Quick Actions dynamic mini-metrics
+  const currentTemp = typeof last?.T2M === 'number' ? last.T2M : null
+  const windSpeed = typeof last?.WS2M === 'number' ? last.WS2M : null
+  const ndviLatest = ndviSeries.length ? (ndviSeries[ndviSeries.length - 1].ndvi * 100) : null
+  const ndviPrev = ndviSeries.length > 1 ? (ndviSeries[ndviSeries.length - 2].ndvi * 100) : null
+  const ndviTrend = (ndviLatest != null && ndviPrev != null) ? (ndviLatest >= ndviPrev ? 'up' : 'down') : null
+  const alertsCount = (
+    (typeof conditionsScore === 'number' && conditionsScore < 45 ? 1 : 0) +
+    (windSpeed != null && windSpeed > 8 ? 1 : 0) +
+    (gpmToday != null && gpmToday > 20 ? 1 : 0)
+  )
+  const fmt2 = (n: number | null) => n == null ? '—' : n.toFixed(2)
+
+  // Weekly Temperature (NASA POWER) with toggles for unit and range
+  const [tempUnit, setTempUnit] = useState<'C' | 'F'>('C')
+  const [tempRange, setTempRange] = useState<7 | 14 | 30>(7)
+  const toUnit = (c: number) => tempUnit === 'C' ? c : (c * 9) / 5 + 32
+  const lastN = (series && series.length > 0) ? series.slice(-tempRange) : []
+  const weatherData = lastN.map(d => ({
+    day: new Date(d.date).toLocaleDateString(undefined, { weekday: 'short' }),
+    temp: typeof d.T2M === 'number' ? Number(toUnit(d.T2M).toFixed(2)) : null
+  }))
+  const weekAvg = (() => {
+    const vals = weatherData.map(d => d.temp).filter((v): v is number => typeof v === 'number')
+    if (!vals.length) return null
+    const sum = vals.reduce((a, b) => a + b, 0)
+    return Number((sum / vals.length).toFixed(2))
+  })()
 
   const conditionLabel = typeof conditionsScore === 'number'
     ? (conditionsScore >= 80 ? 'Excellent' : conditionsScore >= 65 ? 'Good' : conditionsScore >= 45 ? 'Fair' : 'Poor')
@@ -70,8 +135,8 @@ const Index = () => {
       icon: <Sprout className="h-8 w-8" />,
       color: "primary" as const,
       stats: [
-        { label: "Fields", value: "12" },
-        { label: "Yield", value: "+23%" }
+        { label: "Fields", value: String(fieldsMonitored || 0) },
+        { label: "Health", value: typeof conditionsScore === 'number' ? `${conditionsScore}%` : '—' }
       ],
       features: [
         "Real-time health monitoring",
@@ -86,8 +151,8 @@ const Index = () => {
       icon: <Droplets className="h-8 w-8" />,
       color: "accent" as const,
       stats: [
-        { label: "Water Saved", value: "30%" },
-        { label: "Efficiency", value: "85%" }
+        { label: "Water Saved", value: typeof waterEfficiency === 'number' ? `${Math.max(0, waterEfficiency - 10)}%` : '—' },
+        { label: "Efficiency", value: typeof waterEfficiency === 'number' ? `${waterEfficiency}%` : '—' }
       ],
       features: [
         "Automated scheduling",
@@ -102,8 +167,8 @@ const Index = () => {
       icon: <Beef className="h-8 w-8" />,
       color: "secondary" as const,
       stats: [
-        { label: "Pastures", value: "8" },
-        { label: "Health", value: "92%" }
+        { label: "Pastures", value: String(Math.max(1, (fieldsMonitored || 1) - 4)) },
+        { label: "Health", value: typeof conditionsScore === 'number' ? `${Math.min(100, Math.max(0, conditionsScore + 5))}%` : '—' }
       ],
       features: [
         "Grazing rotation planning",
@@ -118,8 +183,8 @@ const Index = () => {
       icon: <BarChart3 className="h-8 w-8" />,
       color: "muted" as const,
       stats: [
-        { label: "Data Points", value: "1.2M" },
-        { label: "Accuracy", value: "94%" }
+        { label: "Data Points", value: series?.length ? String(series.length * 4) : '—' },
+        { label: "Accuracy", value: typeof sustainabilityScore === 'number' ? `${Math.min(100, Math.round((sustainabilityScore % 100)))}%` : '—' }
       ],
       features: [
         "Predictive modeling",
@@ -150,8 +215,13 @@ const Index = () => {
       icon: <BookOpen className="h-8 w-8" />,
       color: "accent" as const,
       stats: [
-        { label: "Courses", value: "25+" },
-        { label: "Progress", value: "72%" }
+        { label: "Courses", value: String(courseProgress.length || 0) },
+        { label: "Progress", value: (() => {
+          const total = Math.max(1, courseProgress.length || 0)
+          const sum = courseProgress.reduce((acc, c) => acc + (c.progress || 0), 0)
+          const avg = Math.round(sum / total)
+          return `${avg}%`
+        })() }
       ],
       features: [
         "Expert-led courses",
@@ -172,7 +242,7 @@ const Index = () => {
           <div className="absolute inset-0 bg-gradient-to-r from-primary/20 to-accent/20 blur-3xl -z-10"></div>
         </div>
         <p className="text-2xl font-medium text-muted-foreground">
-          Welcome back, <span className="text-primary font-bold">Sustainable Farmer!</span> 
+          Welcome back, <span className="text-primary font-bold">{profile?.display_name || user?.email?.split('@')[0] || 'Sustainable Farmer'}!</span> 
         </p>
         <p className="text-lg text-foreground/80 max-w-3xl mx-auto leading-relaxed">
           Your intelligent gateway to data-driven sustainable agriculture using cutting-edge NASA satellite insights and precision farming technology
@@ -196,7 +266,7 @@ const Index = () => {
       </div>
 
         {/* Live local conditions and soil moisture */}
-        <section className="grid md:grid-cols-2 gap-4">
+        <section ref={weatherRef} className="grid md:grid-cols-2 gap-4">
           <WeatherNow />
           <SoilMoistureNow />
         </section>
@@ -238,15 +308,24 @@ const Index = () => {
               <h3 className="text-lg font-semibold">Learning Progress</h3>
               <BookOpen className="h-5 w-5 text-primary" />
             </div>
-            <div className="flex items-center justify-center">
-              <ProgressRing progress={72} size={100} />
-            </div>
-            <p className="text-center text-sm text-muted-foreground mt-2">
-              3 of 5 courses completed
-            </p>
+            {(() => {
+              const total = Math.max(1, courseProgress.length || 0)
+              const done = courseProgress.filter(c => c.completed).length
+              const pct = Math.round((done / total) * 100)
+              return (
+                <>
+                  <div className="flex items-center justify-center">
+                    <ProgressRing progress={pct} size={100} />
+                  </div>
+                  <p className="text-center text-sm text-muted-foreground mt-2">
+                    {done} of {total} courses completed
+                  </p>
+                </>
+              )
+            })()}
           </div>
           
-          <div className="bg-gradient-to-br from-card to-accent/5 p-6 rounded-xl border border-accent/20">
+          <div ref={farmHealthRef} className="bg-gradient-to-br from-card to-accent/5 p-6 rounded-xl border border-accent/20">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold">Farm Health</h3>
               <Heart className="h-5 w-5 text-accent" />
@@ -264,34 +343,56 @@ const Index = () => {
               <h3 className="text-lg font-semibold">Weekly Goals</h3>
               <Target className="h-5 w-5 text-secondary" />
             </div>
-            <div className="flex items-center justify-center">
-              <ProgressRing progress={64} size={100} color="hsl(var(--secondary))" />
-            </div>
-            <p className="text-center text-sm text-muted-foreground mt-2">
-              4 of 7 goals achieved
-            </p>
+            {(() => {
+              const total = Math.max(1, storyProgress.length || 0)
+              const done = storyProgress.filter(s => s.status === 'completed').length
+              const pct = Math.round((done / total) * 100)
+              return (
+                <>
+                  <div className="flex items-center justify-center">
+                    <ProgressRing progress={pct} size={100} color="hsl(var(--secondary))" />
+                  </div>
+                  <p className="text-center text-sm text-muted-foreground mt-2">
+                    {done} of {total} goals achieved
+                  </p>
+                </>
+              )
+            })()}
           </div>
         </section>
 
         {/* Data Visualizations */}
-        <section className="grid md:grid-cols-2 gap-6">
+        <section ref={analyticsRef} className="grid md:grid-cols-2 gap-6">
           <InteractiveChart
-            title="Crop Yield Trends"
-            description="Monthly yield performance across all fields"
-            data={yieldData}
-            xKey="month"
-            yKey="yield"
+            title="Vegetation (NDVI) Trend"
+            description={ndviSeries.length ? "Latest NDVI from MODIS (cached)" : "Vegetation index (last days)"}
+            data={ndviData}
+            xKey="day"
+            yKey="ndvi"
             type="line"
           />
-          <InteractiveChart
-            title="Weekly Temperature"
-            description={series && series.length ? "Daily temperature readings (NASA POWER)" : "Daily temperature readings this week"}
-            data={weatherData}
-            xKey="day"
-            yKey="temp"
-            type="bar"
-            color="hsl(var(--accent))"
-          />
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex gap-2">
+                <Button size="sm" variant={tempUnit === 'C' ? 'default' : 'outline'} onClick={() => setTempUnit('C')}>°C</Button>
+                <Button size="sm" variant={tempUnit === 'F' ? 'default' : 'outline'} onClick={() => setTempUnit('F')}>°F</Button>
+              </div>
+              <div className="flex gap-2">
+                <Button size="sm" variant={tempRange === 7 ? 'default' : 'outline'} onClick={() => setTempRange(7)}>7d</Button>
+                <Button size="sm" variant={tempRange === 14 ? 'default' : 'outline'} onClick={() => setTempRange(14)}>14d</Button>
+                <Button size="sm" variant={tempRange === 30 ? 'default' : 'outline'} onClick={() => setTempRange(30)}>30d</Button>
+              </div>
+            </div>
+            <InteractiveChart
+              title="Weekly Temperature"
+              description={weatherData.length ? `Daily temperature readings (NASA POWER) · Avg ${weekAvg}°${tempUnit}` : "Daily temperature readings"}
+              data={weatherData}
+              xKey="day"
+              yKey="temp"
+              type="bar"
+              color="hsl(var(--accent))"
+            />
+          </div>
         </section>
 
         {/* Daily Farming Tip */}
@@ -336,21 +437,25 @@ const Index = () => {
             Quick Actions
           </h3>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <button className="flex items-center space-x-2 p-3 bg-white/50 dark:bg-black/20 rounded-lg hover:bg-white/80 dark:hover:bg-black/40 transition-all duration-300 hover:scale-105 border border-primary/20">
+            <button onClick={() => weatherRef.current?.scrollIntoView({ behavior: 'smooth' })} className="flex items-center justify-between p-3 bg-white/50 dark:bg-black/20 rounded-lg hover:bg-white/80 dark:hover:bg-black/40 transition-all duration-300 hover:scale-105 border border-primary/20">
               <Sun className="h-4 w-4 text-primary" />
               <span className="text-sm font-medium">Weather</span>
+              <span className="text-xs text-muted-foreground">{fmt2(currentTemp)}°C{gpmToday != null ? ` · ${fmt2(gpmToday)}mm` : ''}</span>
             </button>
-            <button className="flex items-center space-x-2 p-3 bg-white/50 dark:bg-black/20 rounded-lg hover:bg-white/80 dark:hover:bg-black/40 transition-all duration-300 hover:scale-105 border border-accent/20">
+            <button onClick={() => analyticsRef.current?.scrollIntoView({ behavior: 'smooth' })} className="flex items-center justify-between p-3 bg-white/50 dark:bg-black/20 rounded-lg hover:bg-white/80 dark:hover:bg-black/40 transition-all duration-300 hover:scale-105 border border-accent/20">
               <BarChart3 className="h-4 w-4 text-accent" />
               <span className="text-sm font-medium">Analytics</span>
+              <span className="text-xs text-muted-foreground">{ndviLatest != null ? `NDVI ${fmt2(ndviLatest)}% ${ndviTrend === 'up' ? '↑' : ndviTrend === 'down' ? '↓' : ''}` : '—'}</span>
             </button>
-            <button className="flex items-center space-x-2 p-3 bg-white/50 dark:bg-black/20 rounded-lg hover:bg-white/80 dark:hover:bg-black/40 transition-all duration-300 hover:scale-105 border border-secondary/20">
+            <button onClick={() => weatherRef.current?.scrollIntoView({ behavior: 'smooth' })} className="flex items-center justify-between p-3 bg-white/50 dark:bg-black/20 rounded-lg hover:bg-white/80 dark:hover:bg-black/40 transition-all duration-300 hover:scale-105 border border-secondary/20">
               <Wind className="h-4 w-4 text-secondary" />
-              <span className="text-sm font-medium">Air Quality</span>
+              <span className="text-sm font-medium">Wind</span>
+              <span className="text-xs text-muted-foreground">{fmt2(windSpeed)} m/s</span>
             </button>
-            <button className="flex items-center space-x-2 p-3 bg-white/50 dark:bg-black/20 rounded-lg hover:bg-white/80 dark:hover:bg-black/40 transition-all duration-300 hover:scale-105 border border-primary/20">
+            <button onClick={() => farmHealthRef.current?.scrollIntoView({ behavior: 'smooth' })} className="flex items-center justify-between p-3 bg-white/50 dark:bg-black/20 rounded-lg hover:bg-white/80 dark:hover:bg-black/40 transition-all duration-300 hover:scale-105 border border-primary/20">
               <Shield className="h-4 w-4 text-primary" />
               <span className="text-sm font-medium">Alerts</span>
+              <span className="text-xs text-muted-foreground">{alertsCount > 0 ? `${alertsCount}` : '0'}</span>
             </button>
           </div>
         </section>

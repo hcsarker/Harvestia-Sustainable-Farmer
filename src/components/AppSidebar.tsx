@@ -9,7 +9,8 @@ import {
   Award,
   Volume2,
   VolumeX,
-  X
+  X,
+  Brain
 } from "lucide-react"
 import { NavLink, useLocation } from "react-router-dom"
 import {
@@ -31,6 +32,8 @@ const mainItems = [
   { title: "Farm Story", url: "/story", icon: Map },
   { title: "Courses", url: "/courses", icon: BookOpen },
   { title: "Mini Games", url: "/games", icon: Gamepad2 },
+  { title: "Quizzes", url: "/quizzes", icon: Brain },
+  { title: "My Results", url: "/results", icon: Award },
   { title: "Profile", url: "/profile", icon: User },
 ]
 

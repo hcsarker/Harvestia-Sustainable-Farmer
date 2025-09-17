@@ -193,8 +193,8 @@ export const useNASAData = () => {
   const fetchECOSTRESSData = useCallback((latitude?: number, longitude?: number) => 
     fetchNASAData({ dataType: 'ECOSTRESS', latitude, longitude }), [fetchNASAData])
   
-  const fetchGPMData = useCallback((latitude?: number, longitude?: number) => 
-    fetchNASAData({ dataType: 'GPM_IMERG', latitude, longitude }), [fetchNASAData])
+  const fetchGPMData = useCallback((latitude?: number, longitude?: number, location?: string) => 
+    fetchNASAData({ dataType: 'GPM_IMERG', latitude, longitude, location }), [fetchNASAData])
   
   const fetchMERRA2Data = useCallback((latitude?: number, longitude?: number) => 
     fetchNASAData({ dataType: 'MERRA2', latitude, longitude }), [fetchNASAData])

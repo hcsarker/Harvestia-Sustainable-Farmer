@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1'
 
@@ -22,9 +23,15 @@ serve(async (req) => {
       }
     )
 
-    const { action, quizId, answers, questionId, answer } = await req.json()
+  const { action, quizId, answers, questionId, answer } = await req.json()
 
     switch (action) {
+      case 'ping': {
+        return new Response(
+          JSON.stringify({ ok: true }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        )
+      }
       case 'getQuiz': {
         // Get quiz info
         const { data: quiz } = await supabaseClient
@@ -37,9 +44,20 @@ serve(async (req) => {
         const { data: questions } = await supabaseClient
           .rpc('get_quiz_questions_secure', { quiz_id_param: quizId })
 
+        // Check if user already attempted
+        const { data: existing } = await supabaseClient
+          .from('user_quiz_results')
+          .select('id, score, total_questions, completed_at')
+          .eq('quiz_id', quizId)
+          .order('completed_at', { ascending: false })
+          .limit(1)
+          .maybeSingle()
+
         const quizWithQuestions = {
           ...quiz,
-          quiz_questions: questions || []
+          quiz_questions: questions || [],
+          attempted: !!existing,
+          last_result: existing || null
         }
 
         return new Response(
@@ -49,6 +67,21 @@ serve(async (req) => {
       }
 
       case 'submitQuiz': {
+        // Block reattempts: allow only one attempt per user per quiz
+        const { data: prior } = await supabaseClient
+          .from('user_quiz_results')
+          .select('id')
+          .eq('quiz_id', quizId)
+          .limit(1)
+          .maybeSingle()
+
+        if (prior) {
+          return new Response(
+            JSON.stringify({ error: 'Already attempted' }),
+            { status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+          )
+        }
+
         // Use the secure server function to validate answers
         const { data: result, error } = await supabaseClient
           .rpc('submit_quiz_results', {
@@ -59,6 +92,30 @@ serve(async (req) => {
         if (error) {
           throw error
         }
+
+        // Award Bronze achievement if score >= 80%
+        try {
+          const percentage = Number(result?.percentage ?? 0)
+          if (!Number.isNaN(percentage) && percentage >= 80) {
+            // find an achievement that matches Bronze criteria
+            const { data: ach } = await supabaseClient
+              .from('achievements')
+              .select('id')
+              .eq('name', 'Bronze Quiz Master')
+              .limit(1)
+              .maybeSingle()
+            if (ach?.id) {
+              // get current user
+              const { data: { user } } = await supabaseClient.auth.getUser()
+              if (user?.id) {
+                // upsert unique user achievement
+                await supabaseClient
+                  .from('user_achievements')
+                  .insert({ user_id: user.id, achievement_id: ach.id })
+              }
+            }
+          }
+        } catch { /* non-blocking */ }
 
         return new Response(
           JSON.stringify({ result }),
@@ -88,8 +145,9 @@ serve(async (req) => {
         throw new Error('Invalid action')
     }
   } catch (error) {
+    const message = error && typeof error === 'object' && 'message' in error ? (error as any).message : 'Unknown error'
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: message }),
       { 
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
