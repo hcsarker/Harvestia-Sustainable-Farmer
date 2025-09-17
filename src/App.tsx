@@ -14,11 +14,10 @@ const Facts = lazy(() => import('./pages/Facts'));
 const Profile = lazy(() => import('./pages/Profile'));
 const Certificates = lazy(() => import('./pages/Certificates'));
 const Auth = lazy(() => import('./pages/Auth'));
+const ResetPassword = lazy(() => import('@/pages/ResetPassword'));
 const NotFound = lazy(() => import('./pages/NotFound'));
 import { useAuth } from "@/hooks/useAuth";
-const DebugOverlay: React.FC = import.meta.env.DEV
-  ? (lazy(() => import('./components/DebugOverlay')) as unknown as React.FC)
-  : (() => null);
+// Debug overlay removed per request
 
 const queryClient = new QueryClient();
 
@@ -45,6 +44,7 @@ function AppContent() {
     <BrowserRouter>
       <Routes>
         <Route path="/auth" element={<Auth />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/" element={<LayoutWrapper />}>
           <Route index element={<Index />} />
           <Route path="story" element={<StoryJourney />} />
@@ -89,11 +89,6 @@ const App = () => (
       <AppErrorBoundary>
         <Suspense fallback={<div className="p-6">Loading...</div>}>
           <AppContent />
-          {import.meta.env.DEV && (
-            <Suspense>
-              <DebugOverlay />
-            </Suspense>
-          )}
         </Suspense>
       </AppErrorBoundary>
     </TooltipProvider>

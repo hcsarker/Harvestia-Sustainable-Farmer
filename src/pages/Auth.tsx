@@ -10,6 +10,7 @@ import { Sprout, Leaf, Sun, Droplets } from "lucide-react"
 import { supabase } from "@/integrations/supabase/client"
 import { useNavigate } from "react-router-dom"
 import { useToast } from "@/hooks/use-toast"
+import { useAuth } from "@/hooks/useAuth"
 
 export default function Auth() {
   const [email, setEmail] = useState("")
@@ -18,12 +19,89 @@ export default function Auth() {
   const [displayName, setDisplayName] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
+  const [info, setInfo] = useState("")
+  const hasUrl = !!import.meta.env.VITE_SUPABASE_URL || !!import.meta.env.VITE_SUPABASE_PROJECT_ID
+  const hasKey = !!import.meta.env.VITE_SUPABASE_ANON_KEY || !!import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY
+  const missingEnv = !(hasUrl && hasKey)
   
   const navigate = useNavigate()
   const { toast } = useToast()
+  const { enterGuestMode } = useAuth()
+  // const isDev = import.meta.env.DEV
+
+  const mapSupabaseAuthError = (raw: unknown, ctx: 'signin' | 'signup') => {
+    const msg = typeof raw === 'string' ? raw : (raw as { message?: string })?.message || 'Unexpected error'
+    const lower = msg.toLowerCase()
+    if (lower.includes('signups not allowed')) {
+      return 'Sign-ups are disabled in this project. Enable Email provider and allow new users in Supabase Auth → Providers.'
+    }
+    if (lower.includes('already registered')) {
+      return 'This email is already registered. Try signing in or resetting your password.'
+    }
+    if (lower.includes('invalid login') || lower.includes('invalid credentials')) {
+      return 'Invalid email or password. Double-check and try again, or reset your password.'
+    }
+    if (lower.includes('email not confirmed')) {
+      return 'Email not confirmed yet. Check your inbox or click Resend Confirmation.'
+    }
+    if (lower.includes('rate limit')) {
+      return 'Too many attempts. Please wait a moment and try again.'
+    }
+    if (ctx === 'signup' && lower.includes('invalid email')) {
+      return 'Invalid email address. Please enter a valid email.'
+    }
+    return msg
+  }
+
+  // Verify DB linkage by checking/creating a profiles row for the current user
+  const verifyAndEnsureProfile = async () => {
+    try {
+      const { data: userRes, error: userErr } = await supabase.auth.getUser()
+      if (userErr) {
+        console.warn('[Auth] verify profile: getUser error', userErr)
+        return
+      }
+      const user = userRes.user
+      if (!user) return
+
+      const { count, error } = await supabase
+        .from('profiles')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', user.id)
+
+      if (error) {
+        console.warn('[Auth] verify profile: select error', error)
+        toast({ title: 'DB check', description: `Profiles query failed: ${error.message}` })
+        return
+      }
+
+      if (!count || count === 0) {
+        const displayName = user.email ? user.email.split('@')[0] : null
+        const { error: upsertErr } = await supabase.from('profiles').upsert({
+          user_id: user.id,
+          display_name: displayName,
+          level: 1,
+          experience_points: 0,
+        })
+        if (upsertErr) {
+          console.warn('[Auth] verify profile: upsert error', upsertErr)
+          toast({ title: 'DB check', description: `Created profile failed: ${upsertErr.message}` })
+          return
+        }
+        toast({ title: 'DB check', description: 'Profile created successfully.' })
+      } else {
+        toast({ title: 'DB check', description: 'Profile exists and is readable.' })
+      }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e)
+      console.warn('[Auth] verify profile: exception', msg)
+      toast({ title: 'DB check', description: `Exception: ${msg}` })
+    }
+  }
 
   useEffect(() => {
-    // Check if user is already authenticated
+    // Check if user is already authenticated (only if env present)
+    if (missingEnv) return
     const checkAuth = async () => {
       const { data: { session } } = await supabase.auth.getSession()
       if (session) {
@@ -31,7 +109,7 @@ export default function Auth() {
       }
     }
     checkAuth()
-  }, [navigate])
+  }, [navigate, missingEnv])
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -39,22 +117,30 @@ export default function Auth() {
     setError("")
 
     try {
+      if (missingEnv) {
+        setError('Supabase is not configured. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in .env, then restart the dev server.')
+        return
+      }
       const { error } = await supabase.auth.signInWithPassword({
         email,
         password,
       })
 
       if (error) {
-        setError(error.message)
+        console.error('[Auth] signIn error', error)
+        setError(mapSupabaseAuthError(error.message, 'signin'))
       } else {
         toast({
           title: "Welcome back!",
           description: "You have successfully signed in.",
         })
+        // Post-auth DB verification (only when we have a session)
+        await verifyAndEnsureProfile()
         navigate("/")
       }
     } catch (err) {
-      setError("An unexpected error occurred")
+      const message = err instanceof Error ? err.message : 'An unexpected error occurred'
+      setError(message)
     } finally {
       setIsLoading(false)
     }
@@ -64,6 +150,7 @@ export default function Auth() {
     e.preventDefault()
     setIsLoading(true)
     setError("")
+    setInfo("")
 
     if (password !== confirmPassword) {
       setError("Passwords do not match")
@@ -78,9 +165,13 @@ export default function Auth() {
     }
 
     try {
+      if (missingEnv) {
+        setError('Supabase is not configured. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in .env, then restart the dev server.')
+        return
+      }
       const redirectUrl = `${window.location.origin}/`
-      
-      const { error } = await supabase.auth.signUp({
+
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -92,21 +183,79 @@ export default function Auth() {
       })
 
       if (error) {
-        setError(error.message)
+        console.error('[Auth] signUp error', error)
+        setError(mapSupabaseAuthError(error.message, 'signup'))
       } else {
-        toast({
-          title: "Account created!",
-          description: "Please check your email to confirm your account.",
-        })
+        // If email confirmations are off, Supabase may return a session
+        if (data?.session) {
+          toast({ title: 'Account created!', description: 'You are now signed in.' })
+          // Post-auth DB verification
+          await verifyAndEnsureProfile()
+          navigate('/')
+        } else {
+          setInfo('Account created. Please check your email to confirm your account. If you did not receive it, click Resend Confirmation and verify URL settings in Supabase Auth → URL Configuration.')
+          toast({ title: 'Account created!', description: 'Check your email to confirm your account.' })
+        }
       }
     } catch (err) {
-      setError("An unexpected error occurred")
+      const message = err instanceof Error ? err.message : 'An unexpected error occurred'
+      setError(message)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleMagicLink = async () => {
+    setIsLoading(true)
+    setError('')
+    try {
+      if (missingEnv) {
+        setError('Supabase is not configured. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in .env, then restart the dev server.')
+        return
+      }
+      const redirectUrl = `${window.location.origin}/`
+      const { error } = await supabase.auth.signInWithOtp({
+        email,
+        options: { emailRedirectTo: redirectUrl }
+      })
+      if (error) setError(error.message)
+      else toast({ title: 'Magic link sent', description: 'Check your email to sign in.' })
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to send magic link'
+      setError(message)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handlePasswordReset = async () => {
+    // Per request, only navigate to reset page
+    navigate('/reset-password')
+  }
+
+  
+
+  const handleResendConfirmation = async () => {
+    setIsLoading(true)
+    setError('')
+    try {
+      if (missingEnv) {
+        setError('Supabase is not configured. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in .env, then restart the dev server.')
+        return
+      }
+      const { error } = await supabase.auth.resend({ type: 'signup', email })
+      if (error) setError(error.message)
+      else toast({ title: 'Confirmation email resent', description: 'Check your inbox to confirm your account.' })
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to resend confirmation email'
+      setError(message)
     } finally {
       setIsLoading(false)
     }
   }
 
   const handleGuestMode = () => {
+    enterGuestMode()
     toast({
       title: "Entering Guest Mode",
       description: "You can explore the app with limited features.",
@@ -163,11 +312,28 @@ export default function Auth() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            {missingEnv && (
+              <Alert variant="destructive">
+                <AlertDescription>
+                  Supabase environment variables are missing. Set either:
+                  - VITE_SUPABASE_URL or VITE_SUPABASE_PROJECT_ID
+                  - VITE_SUPABASE_ANON_KEY or VITE_SUPABASE_PUBLISHABLE_KEY
+                  Then restart the dev server to enable sign in/up.
+                </AlertDescription>
+              </Alert>
+            )}
             {error && (
               <Alert variant="destructive">
                 <AlertDescription>{error}</AlertDescription>
               </Alert>
             )}
+            {info && (
+              <Alert>
+                <AlertDescription>{info}</AlertDescription>
+              </Alert>
+            )}
+
+            {/* Dev debug panel removed per request */}
 
             <Tabs defaultValue="signin" className="space-y-4">
               <TabsList className="grid w-full grid-cols-2">
@@ -204,6 +370,11 @@ export default function Auth() {
                   <Button type="submit" className="w-full" disabled={isLoading}>
                     {isLoading ? "Signing In..." : "Sign In"}
                   </Button>
+                  <div className="flex">
+                    <Button type="button" variant="ghost" className="w-full" onClick={handlePasswordReset} disabled={isLoading}>
+                      Forgot Password?
+                    </Button>
+                  </div>
                 </form>
               </TabsContent>
 
@@ -256,7 +427,11 @@ export default function Auth() {
                       disabled={isLoading}
                     />
                   </div>
-                  <Button type="submit" className="w-full" disabled={isLoading}>
+                  <Button
+                    type="submit"
+                    className="w-full"
+                    disabled={isLoading || !email || password.length < 6 || password !== confirmPassword}
+                  >
                     {isLoading ? "Creating Account..." : "Create Account"}
                   </Button>
                 </form>

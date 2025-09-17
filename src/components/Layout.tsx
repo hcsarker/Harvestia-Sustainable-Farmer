@@ -3,8 +3,20 @@ import { AppSidebar } from "./AppSidebar"
 import { AuthDialog } from "./AuthDialog"
 import { FactOfTheDay } from "./FactOfTheDay"
 import { Button } from "@/components/ui/button"
-import { User } from "lucide-react"
+import { User, LogOut, User2 } from "lucide-react"
 import { useIsFetching } from "@tanstack/react-query"
+import { useAuth } from "@/hooks/useAuth"
+import { useNavigate } from "react-router-dom"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 
 interface LayoutProps {
   children: React.ReactNode
@@ -12,6 +24,8 @@ interface LayoutProps {
 
 export function Layout({ children }: LayoutProps) {
   const isFetching = useIsFetching()
+  const navigate = useNavigate()
+  const { user, profile, isGuest, isAuthenticated, signOut } = useAuth()
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full">
@@ -32,10 +46,57 @@ export function Layout({ children }: LayoutProps) {
             
             {/* Auth & User Controls */}
             <div className="flex items-center space-x-2">
-              <AuthDialog />
-              <Button variant="ghost" size="sm">
-                <User className="h-4 w-4" />
-              </Button>
+              {!isAuthenticated && !isGuest && (
+                <AuthDialog />
+              )}
+
+              {isGuest && (
+                <div className="text-sm text-muted-foreground mr-2">Guest Mode</div>
+              )}
+
+              {!isGuest && isAuthenticated && (
+                <div className="hidden sm:block text-sm text-muted-foreground mr-1 max-w-[12rem] truncate">
+                  {profile?.display_name || user?.user_metadata?.display_name || user?.email?.split('@')[0]}
+                </div>
+              )}
+
+              {(isAuthenticated || isGuest) && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="sm" className="rounded-full px-2">
+                      <Avatar className="h-7 w-7">
+                        <AvatarImage src={profile?.avatar_url ?? undefined} alt={profile?.display_name ?? user?.email ?? 'User'} />
+                        <AvatarFallback>{(profile?.display_name || user?.email || 'U').charAt(0).toUpperCase()}</AvatarFallback>
+                      </Avatar>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent className="w-56" align="end">
+                    <DropdownMenuLabel>
+                      <div className="flex flex-col">
+                        <span className="font-medium">{profile?.display_name || user?.user_metadata?.display_name || user?.email?.split('@')[0] || 'User'}</span>
+                        <span className="text-xs text-muted-foreground">{user?.email || (isGuest ? 'Guest' : '')}</span>
+                      </div>
+                    </DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuGroup>
+                      <DropdownMenuItem onClick={() => navigate('/profile')}>
+                        <User2 className="mr-2 h-4 w-4" />
+                        <span>Profile</span>
+                      </DropdownMenuItem>
+                    </DropdownMenuGroup>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      onClick={async () => {
+                        await signOut()
+                        navigate('/')
+                      }}
+                    >
+                      <LogOut className="mr-2 h-4 w-4" />
+                      <span>Log out</span>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
             </div>
           </header>
           

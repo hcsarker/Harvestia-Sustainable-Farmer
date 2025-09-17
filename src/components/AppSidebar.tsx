@@ -8,7 +8,8 @@ import {
   Lightbulb, 
   Award,
   Volume2,
-  VolumeX 
+  VolumeX,
+  X
 } from "lucide-react"
 import { NavLink, useLocation } from "react-router-dom"
 import {
@@ -39,7 +40,7 @@ const quickItems = [
 ]
 
 export function AppSidebar() {
-  const { state } = useSidebar()
+  const { state, toggleSidebar } = useSidebar()
   const location = useLocation()
   const [audioEnabled, setAudioEnabled] = useState(true)
   const currentPath = location.pathname
@@ -52,6 +53,17 @@ export function AppSidebar() {
   return (
     <Sidebar className={isCollapsed ? "w-14" : "w-64"} collapsible="icon">
       <SidebarContent>
+        {/* Top bar with close icon when expanded */}
+        {!isCollapsed && (
+          <div className="flex items-center justify-between px-3 py-2 border-b border-sidebar-border">
+            <div className="flex items-center gap-2">
+              <span className="text-lg font-semibold">Menu</span>
+            </div>
+            <Button variant="ghost" size="icon" aria-label="Close sidebar" onClick={toggleSidebar}>
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+        )}
         {!isCollapsed && (
           <div className="p-4 border-b border-sidebar-border">
             <h2 className="text-lg font-bold text-sidebar-foreground">Harvestia</h2>

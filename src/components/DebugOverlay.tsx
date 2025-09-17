@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react'
+import { X } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
+import { supabase } from '@/integrations/supabase/client'
 
 interface RuntimeError {
   message: string
@@ -10,6 +12,8 @@ interface RuntimeError {
 export const DebugOverlay: React.FC = () => {
   const [errors, setErrors] = useState<RuntimeError[]>([])
   const [visible, setVisible] = useState<boolean>(false)
+  const [dbStatus, setDbStatus] = useState<{ ok: boolean; details: string } | null>(null)
+  const [dbChecking, setDbChecking] = useState(false)
 
   useEffect(() => {
     function onError(event: ErrorEvent) {
@@ -57,10 +61,40 @@ export const DebugOverlay: React.FC = () => {
     )
   }
 
+  async function runDbHealthCheck() {
+    setDbChecking(true)
+    try {
+      // 1) Confirm we can talk to auth (no exception on getSession)
+      const sessionResult = await supabase.auth.getSession()
+      const hasSession = !!sessionResult.data.session
+      // 2) Ping a lightweight table that should exist under RLS (profiles)
+      const { count, error } = await supabase
+        .from('profiles')
+        .select('*', { count: 'exact', head: true })
+      if (error) {
+        setDbStatus({ ok: false, details: `Query error: ${error.message}` })
+        return
+      }
+      setDbStatus({ ok: true, details: `Connected. profiles count (RLS): ${count ?? 'unknown'}; session: ${hasSession}` })
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e)
+      setDbStatus({ ok: false, details: `Exception: ${msg}` })
+    } finally {
+      setDbChecking(false)
+    }
+  }
+
   return (
     <>
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', color: '#f0f0f0', zIndex: 9999, fontFamily: 'monospace', overflow: 'auto', padding: '16px' }}>
-      <button onClick={() => setVisible(false)} style={{ position: 'absolute', top: 8, right: 8, background: '#444', color: '#fff', border: 'none', padding: '6px 10px', cursor: 'pointer' }}>Close</button>
+      <button
+        onClick={() => setVisible(false)}
+        aria-label="Close debug overlay"
+        title="Close"
+        style={{ position: 'absolute', top: 8, right: 8, background: 'transparent', color: '#fff', border: '1px solid #555', padding: 6, borderRadius: 6, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+      >
+        <X size={16} />
+      </button>
       <h1 style={{ marginTop: 0 }}>Debug Overlay</h1>
       <section>
         <h2>Environment</h2>
@@ -79,6 +113,18 @@ export const DebugOverlay: React.FC = () => {
       <section>
         <h2>Auth</h2>
         <AuthDiag />
+      </section>
+      <section>
+        <h2>Database Health</h2>
+        <button onClick={runDbHealthCheck} disabled={dbChecking} style={{ background: '#10b981', color: '#fff', border: 'none', padding: '6px 10px', cursor: 'pointer', borderRadius: 4 }}>
+          {dbChecking ? 'Checking…' : 'Run DB Health Check'}
+        </button>
+        {dbStatus && (
+          <div style={{ marginTop: 8 }}>
+            <div><strong>Status:</strong> {dbStatus.ok ? 'OK' : 'FAILED'}</div>
+            <pre style={{ whiteSpace: 'pre-wrap' }}>{dbStatus.details}</pre>
+          </div>
+        )}
       </section>
       <section>
         <h2>Errors ({errors.length})</h2>

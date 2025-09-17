@@ -6,6 +6,7 @@ import { InteractiveChart } from "@/components/InteractiveChart";
 import { ProgressRing } from "@/components/ProgressRing";
 import { AnimatedCounter } from "@/components/AnimatedCounter";
 import { useState } from "react";
+import { useLocalWeather } from '@/hooks/useLocalWeather'
 import { 
   Sprout, 
   Droplets, 
@@ -24,9 +25,15 @@ import {
   Heart,
   Target
 } from "lucide-react";
+import WeatherNow from '@/components/WeatherNow'
+import SoilMoistureNow from '@/components/SoilMoistureNow'
+import DataSources from '@/components/DataSources'
+import { useDashboardStats } from '@/hooks/useDashboardStats'
 
 const Index = () => {
   const [selectedModule, setSelectedModule] = useState<string | null>(null);
+  const { last, series } = useLocalWeather()
+  const { achievementsCount, fieldsMonitored, waterEfficiency, sustainabilityScore, conditionsScore, farmHealth } = useDashboardStats()
 
   // Sample data for charts
   const yieldData = [
@@ -38,15 +45,22 @@ const Index = () => {
     { month: 'Jun', yield: 3800 }
   ];
 
-  const weatherData = [
-    { day: 'Mon', temp: 22 },
-    { day: 'Tue', temp: 25 },
-    { day: 'Wed', temp: 23 },
-    { day: 'Thu', temp: 27 },
-    { day: 'Fri', temp: 24 },
-    { day: 'Sat', temp: 26 },
-    { day: 'Sun', temp: 28 }
-  ];
+  // Build weekly temperature series from NASA POWER (useLocalWeather)
+  const weatherData = (series && series.length > 0)
+    ? series.slice(-7).map(d => ({ day: new Date(d.date).toLocaleDateString(undefined, { weekday: 'short' }), temp: typeof d.T2M === 'number' ? Math.round(d.T2M) : null }))
+    : [
+        { day: 'Mon', temp: 22 },
+        { day: 'Tue', temp: 25 },
+        { day: 'Wed', temp: 23 },
+        { day: 'Thu', temp: 27 },
+        { day: 'Fri', temp: 24 },
+        { day: 'Sat', temp: 26 },
+        { day: 'Sun', temp: 28 }
+      ]
+
+  const conditionLabel = typeof conditionsScore === 'number'
+    ? (conditionsScore >= 80 ? 'Excellent' : conditionsScore >= 65 ? 'Good' : conditionsScore >= 45 ? 'Fair' : 'Poor')
+    : 'Loading'
 
   const farmingModules = [
     {
@@ -172,38 +186,46 @@ const Index = () => {
           </div>
           <div className="flex items-center space-x-2">
             <Thermometer className="h-4 w-4 text-primary" />
-            <span className="text-sm">24°C</span>
+            <span className="text-sm">{typeof last?.T2M === 'number' ? `${last.T2M.toFixed(0)}°C` : '24°C'}</span>
           </div>
           <div className="flex items-center space-x-2">
             <CloudRain className="h-4 w-4 text-accent" />
-            <span className="text-sm">Optimal</span>
+            <span className="text-sm">{conditionLabel}</span>
           </div>
         </div>
       </div>
+
+        {/* Live local conditions and soil moisture */}
+        <section className="grid md:grid-cols-2 gap-4">
+          <WeatherNow />
+          <SoilMoistureNow />
+        </section>
+
+        
 
         {/* Enhanced Stats Grid */}
         <section className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <StatsCard
             title="Fields Monitored"
-            value={12}
+            value={fieldsMonitored || 0}
             icon={Map}
             trend={{ value: 8.5, isPositive: true }}
           />
           <StatsCard
             title="Water Efficiency"
-            value="85%"
+            value={typeof waterEfficiency === 'number' ? `${waterEfficiency}%` : '—'}
             icon={Droplets}
             trend={{ value: 12.3, isPositive: true }}
           />
           <StatsCard
             title="Sustainability Score"
-            value={2100}
+            value={sustainabilityScore || 0}
             icon={Shield}
             trend={{ value: 5.7, isPositive: true }}
           />
           <StatsCard
             title="Achievements"
-            value={7}
+            value={achievementsCount || 0}
             icon={Trophy}
             trend={{ value: 16.2, isPositive: true }}
           />
@@ -230,10 +252,10 @@ const Index = () => {
               <Heart className="h-5 w-5 text-accent" />
             </div>
             <div className="flex items-center justify-center">
-              <ProgressRing progress={88} size={100} color="hsl(var(--accent))" />
+              <ProgressRing progress={typeof farmHealth === 'number' ? farmHealth : 50} size={100} color="hsl(var(--accent))" />
             </div>
             <p className="text-center text-sm text-muted-foreground mt-2">
-              Excellent condition
+              {typeof farmHealth === 'number' ? conditionLabel : 'Calibrating conditions'}
             </p>
           </div>
           
@@ -263,7 +285,7 @@ const Index = () => {
           />
           <InteractiveChart
             title="Weekly Temperature"
-            description="Daily temperature readings this week"
+            description={series && series.length ? "Daily temperature readings (NASA POWER)" : "Daily temperature readings this week"}
             data={weatherData}
             xKey="day"
             yKey="temp"
@@ -300,6 +322,11 @@ const Index = () => {
               </div>
             ))}
           </div>
+        </section>
+
+        {/* Data Sources */}
+        <section>
+          <DataSources />
         </section>
 
         {/* Quick Actions */}

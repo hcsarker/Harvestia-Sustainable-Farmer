@@ -1,0 +1,57 @@
+{
+  "about": {
+    "homepage": "https://www.ladle.dev",
+    "github": "https://github.com/tajo/ladle",
+    "version": 1
+  },
+  "stories": {
+    "ui--badge--variants": {
+      "name": "Variants",
+      "levels": [
+        "Ui",
+        "Badge"
+      ],
+      "locStart": 8,
+      "locEnd": 15,
+      "filePath": "src/stories/Badge.stories.tsx",
+      "namedExport": "Variants",
+      "meta": {}
+    },
+    "ui--button--primary": {
+      "name": "Primary",
+      "levels": [
+        "Ui",
+        "Button"
+      ],
+      "locStart": 8,
+      "locEnd": 15,
+      "filePath": "src/stories/Button.stories.tsx",
+      "namedExport": "Primary",
+      "meta": {}
+    },
+    "ui--button--sizes": {
+      "name": "Sizes",
+      "levels": [
+        "Ui",
+        "Button"
+      ],
+      "locStart": 17,
+      "locEnd": 24,
+      "filePath": "src/stories/Button.stories.tsx",
+      "namedExport": "Sizes",
+      "meta": {}
+    },
+    "ui--card--basic": {
+      "name": "Basic",
+      "levels": [
+        "Ui",
+        "Card"
+      ],
+      "locStart": 9,
+      "locEnd": 24,
+      "filePath": "src/stories/Card.stories.tsx",
+      "namedExport": "Basic",
+      "meta": {}
+    }
+  }
+}
