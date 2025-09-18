@@ -19,12 +19,14 @@ const Profile = lazy(() => import('./pages/Profile'));
 const Certificates = lazy(() => import('./pages/Certificates'));
 const MyResults = lazy(() => import('./pages/MyResults'));
 const QuizAdmin = lazy(() => import('./pages/admin/QuizAdmin'));
+const CourseAdmin = lazy(() => import('./pages/admin/CourseAdmin'));
 const Auth = lazy(() => import('./pages/Auth'));
 const ResetPassword = lazy(() => import('@/pages/ResetPassword'));
 const NotFound = lazy(() => import('./pages/NotFound'));
 const About = lazy(() => import('./pages/About'));
 const Privacy = lazy(() => import('./pages/Privacy'));
 const Contact = lazy(() => import('./pages/Contact'));
+const VerifyCertificate = lazy(() => import('./pages/VerifyCertificate'));
 import { useAuth } from "@/hooks/useAuth";
 // Debug overlay removed per request
 
@@ -67,11 +69,13 @@ function AppContent() {
           <Route path="quizzes/:quizId" element={<QuizExam />} />
           <Route path="profile" element={<Profile />} />
           <Route path="certificates" element={<Certificates />} />
+          <Route path="verify/:code" element={<VerifyCertificate />} />
           <Route path="results" element={<MyResults />} />
           <Route path="about" element={<About />} />
           <Route path="privacy" element={<Privacy />} />
           <Route path="contact" element={<Contact />} />
           <Route path="admin/quizzes" element={<QuizAdmin />} />
+          <Route path="admin/courses" element={<CourseAdmin />} />
           <Route path="*" element={<NotFound />} />
         </Route>
       </Routes>

@@ -29,7 +29,7 @@ export function Layout({ children }: LayoutProps) {
   const { user, profile, isGuest, isAuthenticated, signOut } = useAuth()
   return (
     <SidebarProvider>
-      <div className="h-screen flex w-full">
+  <div className="min-h-screen flex w-full">
         {/* Top loading heartbeat */}
         {isFetching > 0 && (
           <div className="fixed top-0 left-0 right-0 z-[100] h-1 bg-gradient-to-r from-green-500 via-emerald-400 to-lime-400 animate-pulse" />
@@ -101,11 +101,13 @@ export function Layout({ children }: LayoutProps) {
             </div>
           </header>
           
-          {/* Main Content (footer scrolls with content) */}
-          <main className="flex-1 overflow-auto">
+          {/* Main Content (page scrolls, not inner container) */}
+          <main className="flex-1">
             {children}
-            <Footer />
           </main>
+
+          {/* Footer sticks to bottom even when content is short */}
+          <Footer />
           
           {/* Floating Fact of the Day - only on homepage */}
           {window.location.pathname === "/" && (

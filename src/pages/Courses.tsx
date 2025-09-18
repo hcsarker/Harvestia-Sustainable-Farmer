@@ -54,6 +54,8 @@ export default function Courses() {
   const { courseProgress } = useUserProgress()
   const { courses, quickFacts } = useCoursesCatalog()
   const [preview, setPreview] = React.useState<{ open: boolean; course: Course | null }>({ open: false, course: null })
+  const [track, setTrack] = React.useState<'All' | NonNullable<Course['track']>>('All')
+  const [tag, setTag] = React.useState<string | 'All'>('All')
   const getPct = (id: string) => courseProgress.find(c => c.course_id === id)?.progress ?? 0
   const totalCourses = courses.length
   const completedCourses = courses.filter(c => getPct(c.id) >= 100).length
@@ -61,6 +63,9 @@ export default function Courses() {
     const p = getPct(c.id); return p > 0 && p < 100
   }).length
   const avgRating = (courses.reduce((sum, c) => sum + c.rating, 0) / Math.max(1, totalCourses)).toFixed(1)
+  const tracks = Array.from(new Set((courses.map(c => c.track).filter(Boolean) as string[]))).sort()
+  const tags = Array.from(new Set(courses.flatMap(c => c.tags ?? []))).sort()
+  const filtered = courses.filter(c => (track === 'All' || c.track === track) && (tag === 'All' || (c.tags ?? []).includes(tag as string)))
 
   return (
     <div className="container py-6">
@@ -83,7 +88,7 @@ export default function Courses() {
       </div>
 
       {/* Enhanced Stats */}
-      <div className="grid md:grid-cols-4 gap-4 mb-8">
+  <div className="grid md:grid-cols-4 gap-4 mb-8">
         <StatsCard
           title="Total Courses"
           value={totalCourses}
@@ -110,14 +115,37 @@ export default function Courses() {
         />
       </div>
 
+      {/* Filters */}
+      <div className="flex flex-wrap items-center gap-3 mb-6">
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-muted-foreground">Track:</span>
+          <div className="flex flex-wrap gap-2">
+            {(['All', ...tracks] as Array<'All' | NonNullable<Course['track']>>).map(t => (
+              <Button key={t} size="sm" variant={track === t ? 'default' : 'outline'} onClick={() => setTrack(t)}>{t}</Button>
+            ))}
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-muted-foreground">Tag:</span>
+          <div className="flex flex-wrap gap-2">
+            {(['All', ...tags] as Array<string | 'All'>).map(t => (
+              <Button key={t} size="sm" variant={tag === t ? 'default' : 'outline'} onClick={() => setTag(t)}>{t}</Button>
+            ))}
+          </div>
+        </div>
+      </div>
+
       <div className="grid gap-6">
-  {courses.map((course, index) => (
+  {filtered.map((course, index) => (
           <Card 
             key={course.id} 
             className="overflow-hidden hover:shadow-xl transition-all duration-300 hover:scale-[1.02] animate-fade-in border-l-4 border-l-primary"
             style={{ animationDelay: `${index * 0.1}s` }}
           >
             <CardHeader>
+              {course.coverImage && (
+                <img src={course.coverImage} alt={course.title} className="w-full h-40 object-cover rounded-md mb-3" />
+              )}
               <div className="flex items-start justify-between">
                 <div className="flex-1">
                   <div className="flex items-center space-x-2 mb-2">
@@ -126,6 +154,11 @@ export default function Courses() {
                       <Badge variant="secondary" className="bg-primary/10 text-primary">
                         <Award className="h-3 w-3 mr-1" />
                         Certificate
+                      </Badge>
+                    )}
+                    {course.track && (
+                      <Badge variant="secondary" className="bg-blue-50 text-blue-600">
+                        {course.track}
                       </Badge>
                     )}
                   </div>
@@ -153,6 +186,9 @@ export default function Courses() {
                   
                   <p className="text-sm text-muted-foreground mt-2">
                     Instructor: {course.instructor}
+                    {course.tags && course.tags.length ? (
+                      <span className="ml-2 text-xs">• Tags: {course.tags.join(', ')}</span>
+                    ) : null}
                   </p>
                 </div>
               </div>
