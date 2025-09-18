@@ -33,6 +33,7 @@ import WeatherNow from '@/components/WeatherNow'
 import SoilMoistureNow from '@/components/SoilMoistureNow'
 import DataSources from '@/components/DataSources'
 import { useDashboardStats } from '@/hooks/useDashboardStats'
+import SimulationPromo from '@/components/SimulationPromo'
 
 const Index = () => {
   const [selectedModule, setSelectedModule] = useState<string | null>(null);
@@ -265,7 +266,10 @@ const Index = () => {
         </div>
       </div>
 
-        {/* Live local conditions and soil moisture */}
+      {/* Simulation Promo */}
+      <SimulationPromo />
+
+  {/* Live local conditions and soil moisture */}
         <section ref={weatherRef} className="grid md:grid-cols-2 gap-4">
           <WeatherNow />
           <SoilMoistureNow />

@@ -17,7 +17,7 @@ export default function QuizExam() {
   const { quizId } = useParams()
   const navigate = useNavigate()
   const { loading, getQuiz, submitQuiz } = useSecureQuiz()
-  const { isAuthenticated, loading: authLoading } = useAuth()
+  const { isAuthenticated, isGuest, loading: authLoading } = useAuth()
   const [quiz, setQuiz] = useState<Quiz | null>(null)
   const [current, setCurrent] = useState(0)
   const [answers, setAnswers] = useState<Answers>({})
@@ -44,10 +44,10 @@ export default function QuizExam() {
 
   // Require authentication to take/view quiz
   useEffect(() => {
-    if (!authLoading && !isAuthenticated) {
+    if (!authLoading && (!isAuthenticated || isGuest)) {
       navigate('/auth')
     }
-  }, [authLoading, isAuthenticated, navigate])
+  }, [authLoading, isAuthenticated, isGuest, navigate])
 
   // If we're loading too long, show a friendly error instead of infinite spinner
   useEffect(() => {
@@ -62,6 +62,20 @@ export default function QuizExam() {
   const handleSubmit = useCallback(async () => {
     if (!quizId) return
     setSubmitting(true)
+    // Client-side guard to prevent submit when no attempts left
+    if (quiz && typeof quiz.attempts_left === 'number' && quiz.attempts_left <= 0) {
+      const saved: UserQuizResultRow | null = await fetchMyQuizResult(quizId)
+      if (saved) {
+        setResult({
+          score: saved.score,
+          total_questions: saved.total_questions,
+          percentage: Math.round((saved.score / saved.total_questions) * 100),
+        })
+      }
+      setSubmitting(false)
+      return
+    }
+
     const res = await submitQuiz(quizId, answers)
     if (!res && quiz?.attempted && quiz.last_result) {
       setResult({
@@ -140,7 +154,7 @@ export default function QuizExam() {
   // submit handled by memoized handleSubmit above
 
   // Avoid rendering spinner if we just redirected to /auth
-  if (!isAuthenticated && !authLoading) return null
+  if ((!isAuthenticated || isGuest) && !authLoading) return null
 
   if ((loading || authLoading) && !quiz && !staleLoad) {
     return (
@@ -265,7 +279,7 @@ export default function QuizExam() {
         </div>
         <div className="mt-4">
           <Progress value={progress} />
-          <div className="text-xs text-muted-foreground mt-1">{progress}% completed</div>
+          <div className="text-xs text-muted-foreground mt-1">{progress}% completed {typeof quiz.attempts_left === 'number' ? `• Attempts left: ${quiz.attempts_left}` : ''}</div>
         </div>
       </div>
 
@@ -299,9 +313,9 @@ export default function QuizExam() {
               <ChevronLeft className="h-4 w-4 mr-1" /> Prev
             </Button>
             {current < total - 1 ? (
-              <Button onClick={handleNext} disabled={!answers[currentQuestion?.id]}>Next <ChevronRight className="h-4 w-4 ml-1" /></Button>
+              <Button onClick={handleNext} disabled={!answers[currentQuestion?.id]}>Next <ChevronRight className="h-4 w-4 ml-1"/></Button>
             ) : (
-              <Button onClick={handleSubmit} disabled={submitting}>
+              <Button onClick={handleSubmit} disabled={submitting || (typeof quiz.attempts_left === 'number' && quiz.attempts_left <= 0)}>
                 {submitting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
                 Submit
               </Button>

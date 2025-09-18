@@ -15,6 +15,9 @@ export interface Quiz {
     total_questions: number
     completed_at: string
   } | null
+  attempts_allowed?: number
+  attempts_used?: number
+  attempts_left?: number
 }
 
 export interface QuizQuestion {
@@ -110,6 +113,10 @@ export const useSecureQuiz = () => {
       })
 
       if (error) throw error
+      if (data && data.ok === false) {
+        toast({ title: 'Error', description: String(data.error || 'Failed to load quiz'), variant: 'destructive' })
+        return null
+      }
   const quiz = data.quiz as Quiz
   const wrap = { value: quiz, ts: Date.now() }
   quizCache.set(quizId, wrap)
@@ -150,12 +157,20 @@ export const useSecureQuiz = () => {
         const msg = typeof (error as unknown as { message?: string }).message === 'string'
           ? (error as unknown as { message: string }).message
           : String(error)
-        const isConflict = /Already attempted/i.test(msg)
-        if (isConflict) {
-          // No toast here; caller can decide how to proceed
-          return null
+        throw new Error(msg)
+      }
+
+      // Our edge returns 200 with ok=false on business errors
+      if (data && data.ok === false) {
+        const serverMsg = String(data.error || 'Submission failed')
+        if (/Unauthorized/i.test(serverMsg)) {
+          toast({ title: 'Please sign in', description: 'You must be logged in to submit a quiz.', variant: 'destructive' })
+        } else if (/Already attempted/i.test(serverMsg)) {
+          toast({ title: 'Already attempted', description: 'You can only take this quiz once. Check My Results to review your score.', variant: 'destructive' })
+        } else {
+          toast({ title: 'Error', description: serverMsg, variant: 'destructive' })
         }
-        throw error
+        return null
       }
 
       const result = data.result
@@ -168,9 +183,10 @@ export const useSecureQuiz = () => {
       return result
     } catch (error: unknown) {
       console.error('Error submitting quiz:', error)
+      const message = (error as { message?: string })?.message || 'Failed to submit quiz. Please try again.'
       toast({
         title: "Error",
-        description: "Failed to submit quiz. Please try again.",
+        description: message,
         variant: "destructive"
       })
       return null
@@ -186,6 +202,7 @@ export const useSecureQuiz = () => {
       })
 
       if (error) throw error
+      if (data && data.ok === false) return false
       return data.isCorrect
     } catch (error) {
       console.error('Error validating answer:', error)

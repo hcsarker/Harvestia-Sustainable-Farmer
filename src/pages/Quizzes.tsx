@@ -59,9 +59,9 @@ export default function Quizzes() {
               <div className="flex items-center justify-between mb-3">
                 <span className="text-sm text-muted-foreground">
                   {quiz.last_result ? (
-                    <>Attempted • {quiz.last_result.score}/{quiz.last_result.total_questions}</>
+                    <>Attempted • {quiz.last_result.score}/{quiz.last_result.total_questions}{typeof quiz.attempts_left === 'number' ? ` • Attempts left: ${quiz.attempts_left}` : ''}</>
                   ) : (
-                    <>Not attempted</>
+                    <>Not attempted{typeof quiz.attempts_left === 'number' ? ` • Attempts left: ${quiz.attempts_left}` : ''}</>
                   )}
                 </span>
                 <Badge variant={
@@ -71,7 +71,7 @@ export default function Quizzes() {
                   {quiz.difficulty ?? '—'}
                 </Badge>
               </div>
-              {quiz.attempted ? (
+              {quiz.attempted && (quiz.attempts_left ?? 0) <= 0 ? (
                 <Button className="w-full" variant="outline" size="sm" onMouseEnter={() => prefetchQuiz(quiz.id)} onClick={() => navigate(`/quizzes/${quiz.id}`)}>
                   View Result
                 </Button>
@@ -85,7 +85,7 @@ export default function Quizzes() {
                   try { await prefetchQuiz(quiz.id) } catch { /* ignore */ }
                   navigate(`/quizzes/${quiz.id}`)
                 }}>
-                  Start Quiz
+                  {quiz.attempted ? 'Retake Quiz' : 'Start Quiz'}
                 </Button>
               )}
             </CardContent>

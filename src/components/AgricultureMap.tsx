@@ -114,9 +114,12 @@ export const AgricultureMap: React.FC<AgricultureMapProps> = ({
     )
   }, [])
 
-  const handleMapClick = useCallback((event: { coordinate?: [number, number] }) => {
-    if (onLocationSelect && event.coordinate) {
-      const [lng, lat] = event.coordinate
+  type PickingInfo = { coordinate?: number[]; object?: unknown; [key: string]: unknown }
+  const handleMapClick = useCallback((pickingInfo: PickingInfo) => {
+    if (!onLocationSelect) return
+    const coord = pickingInfo?.coordinate as [number, number] | undefined
+    if (coord) {
+      const [lng, lat] = coord
       onLocationSelect(lat, lng)
     }
   }, [onLocationSelect])
@@ -133,20 +136,41 @@ export const AgricultureMap: React.FC<AgricultureMapProps> = ({
         minZoom: 1,
         maxZoom: 10,
         opacity: layer.opacity,
-        renderSubLayers: (props: { data: HTMLImageElement; tile: { bbox: { west: number; south: number; east: number; north: number } } }) => {
+        renderSubLayers: (props) => {
+          const rawBBox = props.tile.bbox as unknown
+          let bounds: [number, number, number, number]
+          if (Array.isArray(rawBBox)) {
+            const arr = rawBBox as number[]
+            bounds = [arr[0], arr[1], arr[2], arr[3]]
+          } else if (rawBBox && typeof rawBBox === 'object') {
+            const b = rawBBox as {
+              west?: number; south?: number; east?: number; north?: number
+              left?: number; bottom?: number; right?: number; top?: number
+            }
+            if (b.west !== undefined && b.south !== undefined && b.east !== undefined && b.north !== undefined) {
+              bounds = [b.west, b.south, b.east, b.north]
+            } else {
+              // fallback for non-geo bounding boxes
+              bounds = [b.left ?? -180, b.bottom ?? -85, b.right ?? 180, b.top ?? 85]
+            }
+          } else {
+            bounds = [-180, -85, 180, 85]
+          }
+
+          const idx = props.tile.index as unknown as { x?: number; y?: number; z?: number }
+          const idSuffix = [idx?.z, idx?.x, idx?.y].filter(v => v !== undefined).join('-')
+
           return new BitmapLayer({
-            ...props,
-            data: undefined,
+            id: `${layer.id}-bmp-${idSuffix}`,
             image: props.data,
-            bounds: [
-              props.tile.bbox.west,
-              props.tile.bbox.south,
-              props.tile.bbox.east,
-              props.tile.bbox.north
-            ]
+            bounds
           })
         },
-        onHover: (info: { coordinate?: [number, number]; object?: unknown }) => setHoverInfo(info)
+        onHover: (info: PickingInfo) => {
+          const c = info.coordinate
+          const tuple = Array.isArray(c) && c.length >= 2 ? ([c[0], c[1]] as [number, number]) : undefined
+          setHoverInfo({ coordinate: tuple, object: info.object })
+        }
       })
     )
 
@@ -170,17 +194,17 @@ export const AgricultureMap: React.FC<AgricultureMapProps> = ({
   return (
     <div className="relative w-full h-full bg-muted/10 rounded-lg overflow-hidden">
       <DeckGL
-        initialViewState={INITIAL_VIEW_STATE}
+  initialViewState={INITIAL_VIEW_STATE as unknown as Record<string, unknown>}
         controller={true}
         layers={deckLayers}
-        onClick={handleMapClick}
-        getTooltip={({ object }: { object?: unknown }) => 
-          hoverInfo && hoverInfo.object
+  onClick={(info: PickingInfo) => handleMapClick(info)}
+  getTooltip={(info: PickingInfo) => 
+          info?.object && info?.coordinate
             ? {
                 html: `<div class="bg-background/95 backdrop-blur-sm p-2 rounded shadow-lg border">
                          <strong>Coordinates:</strong><br/>
-                         Lat: ${hoverInfo.coordinate?.[1]?.toFixed(4)}<br/>
-                         Lng: ${hoverInfo.coordinate?.[0]?.toFixed(4)}
+                         Lat: ${info.coordinate?.[1]?.toFixed(4)}<br/>
+                         Lng: ${info.coordinate?.[0]?.toFixed(4)}
                        </div>`
               }
             : null

@@ -8,18 +8,23 @@ import { Layout } from "./components/Layout";
 const Index = lazy(() => import('./pages/Index'));
 const StoryJourney = lazy(() => import('./pages/StoryJourney'));
 const Courses = lazy(() => import('./pages/Courses'));
+const CourseDetail = lazy(() => import('./pages/CourseDetail'));
 const AgriculturalSimulation = lazy(() => import('@/pages/AgriculturalSimulation').then(m => ({ default: m.AgriculturalSimulation })));
 const MiniGames = lazy(() => import('./pages/MiniGames'));
 const Facts = lazy(() => import('./pages/Facts'));
 const Quizzes = lazy(() => import('./pages/Quizzes'));
 const QuizExam = lazy(() => import('./pages/QuizExam'));
+const ChapterContent = lazy(() => import('./pages/ChapterContent'));
 const Profile = lazy(() => import('./pages/Profile'));
 const Certificates = lazy(() => import('./pages/Certificates'));
 const MyResults = lazy(() => import('./pages/MyResults'));
+const QuizAdmin = lazy(() => import('./pages/admin/QuizAdmin'));
 const Auth = lazy(() => import('./pages/Auth'));
 const ResetPassword = lazy(() => import('@/pages/ResetPassword'));
 const NotFound = lazy(() => import('./pages/NotFound'));
-const AdminQuizzes = lazy(() => import('./pages/AdminQuizzes'));
+const About = lazy(() => import('./pages/About'));
+const Privacy = lazy(() => import('./pages/Privacy'));
+const Contact = lazy(() => import('./pages/Contact'));
 import { useAuth } from "@/hooks/useAuth";
 // Debug overlay removed per request
 
@@ -52,16 +57,21 @@ function AppContent() {
         <Route path="/" element={<LayoutWrapper />}>
           <Route index element={<Index />} />
           <Route path="story" element={<StoryJourney />} />
+          <Route path="story/chapters/:chapterId" element={<ChapterContent />} />
           <Route path="courses" element={<Courses />} />
+          <Route path="courses/:courseId" element={<CourseDetail />} />
           <Route path="simulation" element={<AgriculturalSimulation />} />
           <Route path="games" element={<MiniGames />} />
           <Route path="facts" element={<Facts />} />
           <Route path="quizzes" element={<Quizzes />} />
           <Route path="quizzes/:quizId" element={<QuizExam />} />
-          <Route path="results" element={<MyResults />} />
           <Route path="profile" element={<Profile />} />
-          <Route path="admin/quizzes" element={<AdminQuizzes />} />
           <Route path="certificates" element={<Certificates />} />
+          <Route path="results" element={<MyResults />} />
+          <Route path="about" element={<About />} />
+          <Route path="privacy" element={<Privacy />} />
+          <Route path="contact" element={<Contact />} />
+          <Route path="admin/quizzes" element={<QuizAdmin />} />
           <Route path="*" element={<NotFound />} />
         </Route>
       </Routes>

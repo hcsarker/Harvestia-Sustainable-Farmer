@@ -32,6 +32,13 @@ interface GameScore {
 }
 
 export const useUserProgress = () => {
+  // Minimal RPC wrapper to avoid generated type coupling for custom SQL functions
+  const callRpc = useCallback(
+    (name: string, args: Record<string, unknown>) =>
+      (supabase as unknown as { rpc: (n: string, a: Record<string, unknown>) => Promise<unknown> }).rpc(name, args),
+    []
+  )
+
   const [courseProgress, setCourseProgress] = useState<CourseProgress[]>([])
   const [storyProgress, setStoryProgress] = useState<StoryProgress[]>([])
   const [gameScores, setGameScores] = useState<GameScore[]>([])
@@ -72,7 +79,27 @@ export const useUserProgress = () => {
       if (gameError) throw gameError
 
       setCourseProgress(courseData || [])
-      setStoryProgress(storyData || [])
+      // Deduplicate per chapter_id preferring completed or highest progress
+      type StoryProgressRow = {
+        id: string
+        chapter_id: string
+        progress: number
+        status: string
+        completed: boolean
+        started_at?: string
+        completed_at?: string
+      }
+      const rows: StoryProgressRow[] = (storyData || []) as unknown as StoryProgressRow[]
+
+      const dedupMap: Record<string, StoryProgress> = {}
+      for (const row of rows) {
+        const key = row.chapter_id
+        const existing = dedupMap[key]
+        if (!existing || row.completed || row.progress > (existing.progress ?? 0)) {
+          dedupMap[key] = row
+        }
+      }
+      setStoryProgress(Object.values(dedupMap))
       setGameScores(gameData || [])
     } catch (error) {
       console.error('Error fetching user progress:', error)
@@ -128,9 +155,44 @@ export const useUserProgress = () => {
           progress,
           status,
           completed: progress >= 100
-        })
+        }, { onConflict: 'user_id,chapter_id' })
 
       if (error) throw error
+
+      // If the chapter is completed, try to award achievements
+      if (progress >= 100) {
+        try {
+          // 1) Find the chapter number to derive the code
+          const { data: chapterRow } = await supabase
+            .from('story_chapters')
+            .select('chapter_number')
+            .eq('id', chapterId)
+            .single()
+
+          const chapterNumber = (chapterRow?.chapter_number as number | undefined) ?? undefined
+
+          if (chapterNumber) {
+            // 2) Award per-chapter badge via RPC (server-side)
+            const perChapterCode = `story_ch${chapterNumber}`
+            await callRpc('record_achievement', { p_user: user.id, p_code: perChapterCode })
+          }
+
+          // 3) If all chapters are completed, award story master badge via RPC
+          const [{ data: allChapters }, { data: myCompleted } ] = await Promise.all([
+            supabase.from('story_chapters').select('id'),
+            supabase.from('user_story_progress').select('id').eq('user_id', user.id).eq('completed', true),
+          ])
+
+          const total = allChapters?.length ?? 0
+          const done = myCompleted?.length ?? 0
+          if (total > 0 && done >= total) {
+            await callRpc('record_achievement', { p_user: user.id, p_code: 'story_master' })
+          }
+        } catch (awardErr) {
+          // Non-fatal: progress updated but achievement award failed
+          console.warn('Achievement award skipped:', awardErr)
+        }
+      }
 
       await fetchUserProgress()
       
@@ -141,7 +203,7 @@ export const useUserProgress = () => {
     } catch (error) {
       console.error('Error updating story progress:', error)
     }
-  }, [user, isGuest, fetchUserProgress, toast])
+  }, [user, isGuest, fetchUserProgress, toast, callRpc])
 
   const updateGameScore = useCallback(async (gameId: string, score: number) => {
     if (!user || isGuest) return

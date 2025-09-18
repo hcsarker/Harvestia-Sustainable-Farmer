@@ -2,6 +2,7 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
 import { AppSidebar } from "./AppSidebar"
 import { AuthDialog } from "./AuthDialog"
 import { FactOfTheDay } from "./FactOfTheDay"
+import { Footer } from "./Footer"
 import { Button } from "@/components/ui/button"
 import { User, LogOut, User2 } from "lucide-react"
 import { useIsFetching } from "@tanstack/react-query"
@@ -28,7 +29,7 @@ export function Layout({ children }: LayoutProps) {
   const { user, profile, isGuest, isAuthenticated, signOut } = useAuth()
   return (
     <SidebarProvider>
-      <div className="min-h-screen flex w-full">
+      <div className="h-screen flex w-full">
         {/* Top loading heartbeat */}
         {isFetching > 0 && (
           <div className="fixed top-0 left-0 right-0 z-[100] h-1 bg-gradient-to-r from-green-500 via-emerald-400 to-lime-400 animate-pulse" />
@@ -39,7 +40,7 @@ export function Layout({ children }: LayoutProps) {
           {/* Spacer for fixed heartbeat (optional) */}
           <div className="h-0" />
           {/* Header */}
-          <header className="h-16 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 flex items-center px-4">
+          <header className="sticky top-0 z-50 h-16 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 flex items-center px-4">
             <SidebarTrigger className="mr-4" />
             
             <div className="flex-1" />
@@ -100,9 +101,10 @@ export function Layout({ children }: LayoutProps) {
             </div>
           </header>
           
-          {/* Main Content */}
+          {/* Main Content (footer scrolls with content) */}
           <main className="flex-1 overflow-auto">
             {children}
+            <Footer />
           </main>
           
           {/* Floating Fact of the Day - only on homepage */}

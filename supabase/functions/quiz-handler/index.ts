@@ -33,7 +33,7 @@ serve(async (req) => {
         )
       }
       case 'getQuiz': {
-        // Get quiz info
+        // Get quiz info (including attempts_allowed)
         const { data: quiz } = await supabaseClient
           .from('quizzes')
           .select('*')
@@ -44,20 +44,41 @@ serve(async (req) => {
         const { data: questions } = await supabaseClient
           .rpc('get_quiz_questions_secure', { quiz_id_param: quizId })
 
-        // Check if user already attempted
-        const { data: existing } = await supabaseClient
-          .from('user_quiz_results')
-          .select('id, score, total_questions, completed_at')
-          .eq('quiz_id', quizId)
-          .order('completed_at', { ascending: false })
-          .limit(1)
-          .maybeSingle()
+        // Check current user's attempts
+        const { data: userRes } = await supabaseClient.auth.getUser()
+        const uid = userRes.user?.id ?? null
+        let existing: any = null
+        let attemptsUsed = 0
+        if (uid) {
+          const latest = await supabaseClient
+            .from('user_quiz_results')
+            .select('id, score, total_questions, completed_at')
+            .eq('quiz_id', quizId)
+            .eq('user_id', uid)
+            .order('completed_at', { ascending: false })
+            .limit(1)
+            .maybeSingle()
+          existing = latest.data ?? null
+
+          const cnt = await supabaseClient
+            .from('user_quiz_results')
+            .select('id', { count: 'exact', head: true })
+            .eq('quiz_id', quizId)
+            .eq('user_id', uid)
+          attemptsUsed = cnt.count ?? 0
+        }
+
+  const attemptsAllowed = (quiz as any)?.attempts_allowed ?? 5
+        const attemptsLeft = Math.max(0, attemptsAllowed - attemptsUsed)
 
         const quizWithQuestions = {
           ...quiz,
           quiz_questions: questions || [],
-          attempted: !!existing,
-          last_result: existing || null
+          attempted: attemptsUsed > 0,
+          last_result: existing || null,
+          attempts_allowed: attemptsAllowed,
+          attempts_used: attemptsUsed,
+          attempts_left: attemptsLeft,
         }
 
         return new Response(
@@ -67,18 +88,35 @@ serve(async (req) => {
       }
 
       case 'submitQuiz': {
-        // Block reattempts: allow only one attempt per user per quiz
-        const { data: prior } = await supabaseClient
-          .from('user_quiz_results')
-          .select('id')
-          .eq('quiz_id', quizId)
-          .limit(1)
-          .maybeSingle()
-
-        if (prior) {
+        // Must be authenticated
+        const { data: userRes } = await supabaseClient.auth.getUser()
+        const uid = userRes.user?.id
+        if (!uid) {
           return new Response(
-            JSON.stringify({ error: 'Already attempted' }),
-            { status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+            JSON.stringify({ ok: false, error: 'Unauthorized' }),
+            { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+          )
+        }
+
+        // Enforce attempt limit per quiz
+        const { data: quiz } = await supabaseClient
+          .from('quizzes')
+          .select('attempts_allowed')
+          .eq('id', quizId)
+          .single()
+
+        const attemptsAllowed = (quiz as any)?.attempts_allowed ?? 5
+        const cnt = await supabaseClient
+          .from('user_quiz_results')
+          .select('id', { count: 'exact', head: true })
+          .eq('quiz_id', quizId)
+          .eq('user_id', uid)
+        const attemptsUsed = cnt.count ?? 0
+
+        if (attemptsUsed >= attemptsAllowed) {
+          return new Response(
+            JSON.stringify({ ok: false, error: 'No attempts left' }),
+            { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
           )
         }
 
@@ -93,32 +131,17 @@ serve(async (req) => {
           throw error
         }
 
-        // Award Bronze achievement if score >= 80%
+        // Award achievements based on score
         try {
-          const percentage = Number(result?.percentage ?? 0)
-          if (!Number.isNaN(percentage) && percentage >= 80) {
-            // find an achievement that matches Bronze criteria
-            const { data: ach } = await supabaseClient
-              .from('achievements')
-              .select('id')
-              .eq('name', 'Bronze Quiz Master')
-              .limit(1)
-              .maybeSingle()
-            if (ach?.id) {
-              // get current user
-              const { data: { user } } = await supabaseClient.auth.getUser()
-              if (user?.id) {
-                // upsert unique user achievement
-                await supabaseClient
-                  .from('user_achievements')
-                  .insert({ user_id: user.id, achievement_id: ach.id })
-              }
-            }
+          const pct = result?.percentage ?? Math.round((result?.score / result?.total_questions) * 100)
+          const code = pct >= 100 ? 'perfect_quiz' : pct >= 90 ? 'silver_quiz' : pct >= 80 ? 'bronze_quiz' : null
+          if (code) {
+            await supabaseClient.rpc('record_achievement', { p_user: (await supabaseClient.auth.getUser()).data.user?.id, p_code: code })
           }
-        } catch { /* non-blocking */ }
+        } catch (_) { /* non-blocking */ }
 
         return new Response(
-          JSON.stringify({ result }),
+          JSON.stringify({ ok: true, result }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
         )
       }
@@ -142,16 +165,16 @@ serve(async (req) => {
       }
 
       default:
-        throw new Error('Invalid action')
+        return new Response(
+          JSON.stringify({ ok: false, error: 'Invalid action' }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        )
     }
   } catch (error) {
     const message = error && typeof error === 'object' && 'message' in error ? (error as any).message : 'Unknown error'
     return new Response(
-      JSON.stringify({ error: message }),
-      { 
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      },
+      JSON.stringify({ ok: false, error: message }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
     )
   }
 })

@@ -8,7 +8,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Separator } from "@/components/ui/separator"
 import { Sprout, Leaf, Sun, Droplets } from "lucide-react"
 import { supabase } from "@/integrations/supabase/client"
-import { useNavigate } from "react-router-dom"
+import { useLocation, useNavigate } from "react-router-dom"
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/hooks/useAuth"
 
@@ -25,6 +25,9 @@ export default function Auth() {
   const missingEnv = !(hasUrl && hasKey)
   
   const navigate = useNavigate()
+  const location = useLocation()
+  const searchParams = new URLSearchParams(location.search)
+  const redirectPath = searchParams.get('redirect') || '/'
   const { toast } = useToast()
   const { enterGuestMode } = useAuth()
   // const isDev = import.meta.env.DEV
@@ -105,11 +108,11 @@ export default function Auth() {
     const checkAuth = async () => {
       const { data: { session } } = await supabase.auth.getSession()
       if (session) {
-        navigate("/")
+  navigate(redirectPath)
       }
     }
     checkAuth()
-  }, [navigate, missingEnv])
+  }, [navigate, missingEnv, redirectPath])
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -136,7 +139,7 @@ export default function Auth() {
         })
         // Post-auth DB verification (only when we have a session)
         await verifyAndEnsureProfile()
-        navigate("/")
+  navigate(redirectPath)
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : 'An unexpected error occurred'
@@ -260,7 +263,7 @@ export default function Auth() {
       title: "Entering Guest Mode",
       description: "You can explore the app with limited features.",
     })
-    navigate("/")
+  navigate(redirectPath)
   }
 
   return (
