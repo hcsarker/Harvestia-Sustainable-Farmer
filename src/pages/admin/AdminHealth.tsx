@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { supabase } from '@/integrations/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -22,7 +22,7 @@ export default function AdminHealth() {
     VITE_SUPABASE_PUBLISHABLE_KEY: !!import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
   }), [])
 
-  async function runChecks() {
+  const runChecks = useCallback(async () => {
     setRunning(true)
     const list: CheckResult[] = []
 
@@ -44,8 +44,9 @@ export default function AdminHealth() {
         detail: error ? error.message : (data?.session ? 'session active' : 'no session'),
         durationMs: Math.round(t1 - t0)
       })
-    } catch (e: any) {
-      list.push({ name: 'Supabase auth.getSession()', status: 'fail', detail: e?.message })
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e)
+      list.push({ name: 'Supabase auth.getSession()', status: 'fail', detail: msg })
     }
 
     // Simple public table query if exists (courses)
@@ -59,30 +60,32 @@ export default function AdminHealth() {
         detail: error ? error.message : `rows:${data?.length ?? 0} count:${count ?? 'n/a'}`,
         durationMs: Math.round(t1 - t0)
       })
-    } catch (e: any) {
-      list.push({ name: 'Query: courses (limit 1)', status: 'fail', detail: e?.message })
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e)
+      list.push({ name: 'Query: courses (limit 1)', status: 'fail', detail: msg })
     }
 
-    // Edge function call example: nasa-data (if deployed)
+    // Edge function call example: nasa-data (via supabase client)
     try {
       const t0 = performance.now()
-      const res = await fetch('/functions/v1/nasa-data', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type: 'ping' }) })
+      const { data, error } = await supabase.functions.invoke('nasa-data', {
+        body: { type: 'ping' }
+      })
       const t1 = performance.now()
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
-      const body = await res.json().catch(() => ({}))
-      list.push({ name: 'Edge: nasa-data', status: 'pass', detail: JSON.stringify(body).slice(0, 120), durationMs: Math.round(t1 - t0) })
-    } catch (e: any) {
-      list.push({ name: 'Edge: nasa-data', status: 'fail', detail: e?.message })
+      list.push({ name: 'Edge: nasa-data', status: error ? 'fail' : 'pass', detail: error ? error.message : JSON.stringify(data).slice(0, 120), durationMs: Math.round(t1 - t0) })
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e)
+      list.push({ name: 'Edge: nasa-data', status: 'fail', detail: msg })
     }
 
     setResults(list)
     setRunning(false)
-  }
+  }, [env])
 
   useEffect(() => {
     // auto-run on mount
     runChecks()
-  }, [])
+  }, [runChecks])
 
   return (
     <div className="container mx-auto p-6">
