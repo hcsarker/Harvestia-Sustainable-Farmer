@@ -145,7 +145,25 @@ const miniGames = [
     isUnityGame: false,
     gameId: undefined,
     gameUrl: undefined
-  }
+  },
+  
+{
+  id: 9,
+  title: "Smart Farming Simulator",
+  description: "Smart Farming Simulator is an engaging Unity WebGL game where players manage a modern farm using IoT devices and sustainable practices.",
+  category: "Unity Game",
+  difficulty: "Easy",
+  duration: "10 min",
+  highScore: 1000,
+  players: 100,
+  rating: 4.5,
+  icon: Target,
+  color: "bg-blue-600",
+  isUnityGame: true,
+  gameId: "custom-game", // বা
+  gameUrl: "https://imtiazahmeddipto.itch.io/smartfarming"
+}
+
 ]
 
 // Quizzes moved to dedicated Quizzes page
