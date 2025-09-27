@@ -7,10 +7,16 @@ import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
-import { Separator } from '@/components/ui/separator'
 import { useToast } from '@/hooks/use-toast'
 
-type QuizRow = { id: string; title: string; difficulty: string | null; nasa_topic: string | null; questions_count: number | null; attempts_allowed?: number | null }
+type QuizRow = { 
+  id: string; 
+  title: string; 
+  difficulty: string | null; 
+  nasa_topic: string | null; 
+  questions_count: number | null; 
+  attempts_allowed?: number | null 
+}
 
 export default function QuizAdmin() {
   const { user, isGuest } = useAuth()
@@ -21,6 +27,7 @@ export default function QuizAdmin() {
   const [newQuiz, setNewQuiz] = useState({ title: '', difficulty: 'Easy', nasa_topic: '', attempts_allowed: 5 })
   const [selectedQuiz, setSelectedQuiz] = useState<string>('')
   const [qForm, setQForm] = useState({ question: '', options: '', correct_answer: '', explanation: '' })
+  const [refreshKey, setRefreshKey] = useState(0)
 
   const isAdmin = useMemo(() => {
     if (!user || isGuest) return false
@@ -37,7 +44,7 @@ export default function QuizAdmin() {
       if (error) {
         toast({ 
           title: 'Database Connection Failed', 
-          description: `Error: ${error.message}. Run setup SQL script in Supabase dashboard.`,
+          description: `Error: ${error.message}. Tables might not exist. Try running database setup.`,
           variant: 'destructive' 
         })
       } else {
@@ -57,65 +64,162 @@ export default function QuizAdmin() {
     setIsTestingConnection(false)
   }
 
-  useEffect(() => {
-    let active = true
-    async function load() {
-      setLoading(true)
-  const { data } = await supabase.from('quizzes').select('id, title, difficulty, nasa_topic, questions_count, attempts_allowed').order('created_at', { ascending: true })
-  if (active) setQuizzes((data as unknown as QuizRow[]) || [])
-      setLoading(false)
+  const loadQuizzes = async () => {
+    setLoading(true)
+    try {
+      const { data, error } = await supabase
+        .from('quizzes')
+        .select('id, title, difficulty, nasa_topic')
+        .order('created_at', { ascending: true })
+      
+      if (error) {
+        toast({ title: 'Error', description: 'Failed to load quizzes', variant: 'destructive' })
+        return
+      }
+      
+      // Get question counts for each quiz
+      const quizzesWithCounts = []
+      for (const quiz of data || []) {
+        const { count } = await supabase
+          .from('quiz_questions')
+          .select('*', { count: 'exact', head: true })
+          .eq('quiz_id', quiz.id)
+        
+        quizzesWithCounts.push({
+          ...quiz,
+          questions_count: count || 0
+        })
+      }
+      
+      setQuizzes(quizzesWithCounts as QuizRow[])
+    } catch (error) {
+      toast({ title: 'Error', description: 'Failed to load quizzes', variant: 'destructive' })
     }
-    void load()
-    return () => { active = false }
-  }, [])
+    setLoading(false)
+  }
+
+  useEffect(() => {
+    loadQuizzes()
+  }, [refreshKey]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const createQuiz = async () => {
-    if (!newQuiz.title.trim()) return
+    if (!newQuiz.title.trim()) {
+      toast({ title: 'Error', description: 'Please enter a quiz title', variant: 'destructive' })
+      return
+    }
+    
     setLoading(true)
-    const { data, error } = await supabase.from('quizzes').insert({
-      title: newQuiz.title.trim(),
-      difficulty: newQuiz.difficulty,
-      nasa_topic: newQuiz.nasa_topic || null,
-      attempts_allowed: newQuiz.attempts_allowed ?? 5,
-    }).select('id, title, difficulty, nasa_topic, questions_count, attempts_allowed').single()
+    try {
+      const { error } = await supabase.from('quizzes').insert({
+        title: newQuiz.title.trim(),
+        difficulty: newQuiz.difficulty,
+        nasa_topic: newQuiz.nasa_topic || null,
+      })
+      
+      if (error) {
+        toast({ title: 'Error', description: error.message, variant: 'destructive' })
+        return
+      }
+      
+      toast({ title: 'Success', description: 'Quiz created successfully!' })
+      setNewQuiz({ title: '', difficulty: 'Easy', nasa_topic: '', attempts_allowed: 5 })
+      setRefreshKey(prev => prev + 1) // Trigger refresh
+    } catch (error) {
+      toast({ title: 'Error', description: 'Failed to create quiz', variant: 'destructive' })
+    }
     setLoading(false)
-  if (error) return
-  setQuizzes(q => [...q, data as unknown as QuizRow])
-    setNewQuiz({ title: '', difficulty: 'Easy', nasa_topic: '', attempts_allowed: 5 })
   }
 
   const addQuestion = async () => {
-    if (!selectedQuiz) return
+    if (!selectedQuiz) {
+      toast({ title: 'Error', description: 'Please select a quiz first', variant: 'destructive' })
+      return
+    }
+    
     const opts = qForm.options.split(',').map(s => s.trim()).filter(Boolean)
-    if (!qForm.question.trim() || opts.length < 2 || !qForm.correct_answer.trim()) return
+    
+    if (!qForm.question.trim()) {
+      toast({ title: 'Error', description: 'Please enter a question', variant: 'destructive' })
+      return
+    }
+    
+    if (opts.length < 2) {
+      toast({ title: 'Error', description: 'Please provide at least 2 options (comma-separated)', variant: 'destructive' })
+      return
+    }
+    
+    if (!qForm.correct_answer.trim()) {
+      toast({ title: 'Error', description: 'Please enter the correct answer', variant: 'destructive' })
+      return
+    }
+    
+    if (!opts.includes(qForm.correct_answer.trim())) {
+      toast({ title: 'Error', description: 'Correct answer must match one of the options exactly', variant: 'destructive' })
+      return
+    }
+    
     setLoading(true)
-    const { error } = await supabase.from('quiz_questions').insert({
-      quiz_id: selectedQuiz,
-      question: qForm.question.trim(),
-      options: opts,
-      correct_answer: qForm.correct_answer.trim(),
-      explanation: qForm.explanation || null,
-    })
-    setLoading(false)
-    if (!error) {
+    try {
+      const { error } = await supabase.from('quiz_questions').insert({
+        quiz_id: selectedQuiz,
+        question: qForm.question.trim(),
+        options: opts,
+        correct_answer: qForm.correct_answer.trim(),
+        explanation: qForm.explanation || null,
+      })
+      
+      if (error) {
+        toast({ title: 'Error', description: error.message, variant: 'destructive' })
+        return
+      }
+      
       setQForm({ question: '', options: '', correct_answer: '', explanation: '' })
       toast({ title: '✅ Question Added', description: 'Question has been added to the quiz successfully.' })
-    } else {
-      toast({ title: 'Error', description: error.message, variant: 'destructive' })
+      setRefreshKey(prev => prev + 1) // Refresh to update question counts
+    } catch (error) {
+      toast({ title: 'Error', description: 'Failed to add question', variant: 'destructive' })
     }
+    setLoading(false)
   }
 
   const deleteQuiz = async (quizId: string) => {
     if (!confirm('Are you sure you want to delete this quiz? This will also delete all its questions.')) return
+    
     setLoading(true)
-    const { error } = await supabase.from('quizzes').delete().eq('id', quizId)
-    setLoading(false)
-    if (!error) {
-      setQuizzes(prev => prev.filter(q => q.id !== quizId))
+    try {
+      // First delete all questions for this quiz
+      const { error: questionsError } = await supabase
+        .from('quiz_questions')
+        .delete()
+        .eq('quiz_id', quizId)
+      
+      if (questionsError) {
+        toast({ title: 'Error', description: 'Failed to delete quiz questions', variant: 'destructive' })
+        return
+      }
+      
+      // Then delete the quiz
+      const { error: quizError } = await supabase
+        .from('quizzes')
+        .delete()
+        .eq('id', quizId)
+      
+      if (quizError) {
+        toast({ title: 'Error', description: quizError.message, variant: 'destructive' })
+        return
+      }
+      
       toast({ title: '✅ Quiz Deleted', description: 'Quiz and all its questions have been deleted.' })
-    } else {
-      toast({ title: 'Delete Error', description: error.message, variant: 'destructive' })
+      setRefreshKey(prev => prev + 1) // Refresh the list
+      
+      // Clear selection if deleted quiz was selected
+      if (selectedQuiz === quizId) {
+        setSelectedQuiz('')
+      }
+    } catch (error) {
+      toast({ title: 'Error', description: 'Failed to delete quiz', variant: 'destructive' })
     }
+    setLoading(false)
   }
 
   if (!isAdmin) {
@@ -137,21 +241,41 @@ export default function QuizAdmin() {
   return (
     <div className="container py-6 space-y-6">
       
-      {/* Setup Instructions */}
-      <Card className="border-blue-200 bg-blue-50">
-        <CardHeader>
-          <CardTitle className="text-blue-800">🚀 Quiz System Setup</CardTitle>
-          <CardDescription className="text-blue-600">
-            First time setup required! Please follow these steps:
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="text-sm text-blue-700 space-y-2">
-          <div className="font-medium">Step 1: Run SQL Setup</div>
-          <p>Copy content from <code>/supabase/sql/complete_setup.sql</code> and run it in your Supabase dashboard → SQL Editor</p>
-          <div className="font-medium">Step 2: Test Connection</div>
-          <p>Click "🔍 Test Database" button below to verify everything is working</p>
-        </CardContent>
-      </Card>
+      {/* Quiz Statistics Overview */}
+      <div className="grid md:grid-cols-4 gap-4">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Total Quizzes</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{quizzes.length}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Total Questions</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{quizzes.reduce((sum, q) => sum + (q.questions_count || 0), 0)}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Easy Quizzes</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-green-600">{quizzes.filter(q => q.difficulty === 'Easy').length}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Hard Quizzes</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-red-600">{quizzes.filter(q => q.difficulty === 'Hard').length}</div>
+          </CardContent>
+        </Card>
+      </div>
 
       <Card>
         <CardHeader>
@@ -233,39 +357,70 @@ export default function QuizAdmin() {
       </Card>
 
       <Card>
-        <CardHeader>
-          <CardTitle>Quizzes</CardTitle>
-          <CardDescription>Existing quizzes overview</CardDescription>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div>
+            <CardTitle>Quiz Management</CardTitle>
+            <CardDescription>Manage existing quizzes and their questions</CardDescription>
+          </div>
+          <Button onClick={() => setRefreshKey(prev => prev + 1)} variant="outline" size="sm" disabled={loading}>
+            {loading ? '🔄 Loading...' : '🔄 Refresh'}
+          </Button>
         </CardHeader>
         <CardContent>
-          <div className="space-y-2">
-            {quizzes.map(q => (
-              <div key={q.id} className="flex items-center justify-between border rounded-md p-3">
-                <div>
-                  <div className="font-medium">{q.title}</div>
-                  <div className="text-xs text-muted-foreground">{q.difficulty ?? '—'} • {q.nasa_topic ?? '—'} • {q.questions_count ?? 0} questions • Attempts: {q.attempts_allowed ?? 5}</div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Button 
-                    size="sm" 
-                    variant="outline" 
-                    onClick={() => setSelectedQuiz(q.id)}
-                    disabled={loading}
-                  >
-                    {selectedQuiz === q.id ? '✓ Selected' : 'Select'}
-                  </Button>
-                  <Button 
-                    size="sm" 
-                    variant="destructive" 
-                    onClick={() => deleteQuiz(q.id)}
-                    disabled={loading}
-                  >
-                    🗑️ Delete
-                  </Button>
-                </div>
-              </div>
-            ))}
-          </div>
+          {loading && quizzes.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
+              Loading quizzes...
+            </div>
+          ) : quizzes.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              <p>No quizzes found. Create your first quiz above!</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {quizzes.map(q => {
+                const difficultyColors = q.difficulty === 'Easy' ? 'bg-green-100 text-green-800' : q.difficulty === 'Medium' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'
+                return (
+                  <div key={q.id} className={`border-2 rounded-lg p-4 ${selectedQuiz === q.id ? 'border-primary bg-primary/5' : 'border-muted'}`}>
+                    <div className="flex items-start justify-between">
+                      <div className="space-y-2 flex-1">
+                        <div className="flex items-center gap-2">
+                          <h3 className="font-semibold">{q.title}</h3>
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${difficultyColors}`}>
+                            {q.difficulty}
+                          </span>
+                        </div>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm text-muted-foreground">
+                          <div>📚 {q.questions_count || 0} questions</div>
+                          <div>🎯 {q.attempts_allowed || 5} attempts</div>
+                          <div>🛰️ {q.nasa_topic || 'No topic'}</div>
+                          <div>🆔 {q.id.slice(0, 8)}...</div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 ml-4">
+                        <Button 
+                          size="sm" 
+                          variant={selectedQuiz === q.id ? "default" : "outline"}
+                          onClick={() => setSelectedQuiz(selectedQuiz === q.id ? '' : q.id)}
+                          disabled={loading}
+                        >
+                          {selectedQuiz === q.id ? '✓ Selected' : 'Select'}
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          variant="destructive" 
+                          onClick={() => deleteQuiz(q.id)}
+                          disabled={loading}
+                        >
+                          🗑️
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

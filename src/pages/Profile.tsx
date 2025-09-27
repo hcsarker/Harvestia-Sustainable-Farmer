@@ -16,6 +16,18 @@ export default function Profile() {
   const { user, profile, fetchUserProfile, isGuest } = useAuth()
   const { courseProgress, gameScores, loading: progressLoading } = useUserProgress()
   const { all: allAchievements, earnedIds, certCount, loading: achLoading, refresh } = useAchievements()
+  
+  console.log('Profile: Component data:', { 
+    user: user?.id, 
+    profile, 
+    isGuest, 
+    courseProgress: courseProgress.length,
+    gameScores: gameScores.length,
+    allAchievements: allAchievements.length,
+    earnedIds: earnedIds.size,
+    progressLoading,
+    achLoading
+  })
   const [editMode, setEditMode] = React.useState(false)
   const [displayName, setDisplayName] = React.useState(profile?.display_name ?? '')
   const [location, setLocation] = React.useState(profile?.location ?? '')
@@ -72,26 +84,51 @@ export default function Profile() {
     if (!user || isGuest) return
     const file = e.target.files?.[0]
     if (!file) return
+    
+    // Check file size (max 2MB)
+    if (file.size > 2 * 1024 * 1024) {
+      toast({ title: 'File too large', description: 'Please select an image smaller than 2MB', variant: 'destructive' })
+      return
+    }
+    
     setAvatarUploading(true)
     try {
-      const ext = file.name.split('.').pop() || 'jpg'
-      const path = `${user.id}/${Date.now()}.${ext}`
-      const { error: upErr } = await supabase.storage.from('avatars').upload(path, file, { upsert: true, contentType: file.type || undefined })
-      if (upErr) {
-        toast({ title: 'Upload failed', description: upErr.message, variant: 'destructive' })
-        return
-      }
-  const { data: pub } = supabase.storage.from('avatars').getPublicUrl(path)
-      const avatarUrl = pub.publicUrl
-      // Persist in DB and refresh profile
-  const { error: saveErr } = await supabase.from('profiles').upsert({ user_id: user.id, avatar_url: avatarUrl }, { onConflict: 'user_id' });
+      console.log('Profile: Processing avatar file:', file.name, file.size)
+      
+      // Convert to base64 data URL
+      const reader = new FileReader()
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        reader.onload = () => resolve(reader.result as string)
+        reader.onerror = reject
+        reader.readAsDataURL(file)
+      })
+      
+      console.log('Profile: File converted to base64, length:', dataUrl.length)
+      
+      // Save data URL directly to profile
+      const { error: saveErr } = await supabase
+        .from('profiles')
+        .upsert({ 
+          user_id: user.id, 
+          avatar_url: dataUrl 
+        }, { onConflict: 'user_id' })
+      
       if (saveErr) {
+        console.error('Profile: Save error:', saveErr)
         toast({ title: 'Profile update failed', description: saveErr.message, variant: 'destructive' })
         return
       }
+      
       await fetchUserProfile(user.id)
-      toast({ title: 'Avatar updated' })
+      
+      // Force a small delay and trigger a custom event for header to update
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('profileUpdated'))
+      }, 100)
+      
+      toast({ title: 'Avatar updated successfully!' })
     } catch (err: unknown) {
+      console.error('Profile: Avatar upload error:', err)
       const msg = err instanceof Error ? err.message : 'Unexpected error'
       toast({ title: 'Upload error', description: msg, variant: 'destructive' })
     } finally {
@@ -200,7 +237,22 @@ const recentActivity = [
   if (!user && !isGuest) {
     return (
       <div className="min-h-[50vh] flex items-center justify-center text-muted-foreground">
-        Please sign in to view your profile.
+        <div className="text-center">
+          <h2 className="text-xl font-semibold mb-2">Sign In Required</h2>
+          <p>Please sign in to view your profile.</p>
+        </div>
+      </div>
+    )
+  }
+  
+  if (isGuest) {
+    return (
+      <div className="min-h-[50vh] flex items-center justify-center text-muted-foreground">
+        <div className="text-center">
+          <h2 className="text-xl font-semibold mb-2">Guest Mode</h2>
+          <p>Profile features are not available in guest mode.</p>
+          <p className="mt-2 text-sm">Sign up for a free account to track your progress and achievements!</p>
+        </div>
       </div>
     )
   }

@@ -28,6 +28,7 @@ export const useAchievements = () => {
   const { courseProgress, storyProgress } = useUserProgress()
 
   const fetchAll = useCallback(async () => {
+    console.log('useAchievements: Fetching achievements for user:', user?.id, 'isGuest:', isGuest)
     if (!user || isGuest) {
       setAll([])
       setUserAch([])
@@ -45,6 +46,13 @@ export const useAchievements = () => {
   (supabase as any).from('user_certificates').select('id').eq('user_id', user.id),
         supabase.from('story_chapters').select('id'),
       ])
+      console.log('useAchievements: Fetch results:', { 
+        achievements: (ach as Achievement[])?.length || 0,
+        userAchievements: uach?.length || 0,
+        certificates: (ucert as unknown[] | null)?.length || 0,
+        chapters: (chapters as unknown[] | null)?.length || 0
+      })
+      
       setAll((ach as Achievement[]) || [])
       setUserAch(uach || [])
       setCertCount((ucert as unknown[] | null)?.length || 0)

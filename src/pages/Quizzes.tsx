@@ -10,7 +10,8 @@ import { Brain, Trophy } from 'lucide-react'
 export default function Quizzes() {
   const navigate = useNavigate()
   const { isAuthenticated, isGuest } = useAuth()
-  const { quizzes, loading } = useQuizzesCatalog()
+  const { quizzes, loading, error, refreshQuizzes } = useQuizzesCatalog()
+
   return (
     <div className="container py-6">
       <div className="mb-8 animate-fade-in">
@@ -21,8 +22,15 @@ export default function Quizzes() {
         <p className="text-muted-foreground mt-2">Test your knowledge and level up your sustainable farming skills</p>
       </div>
 
-      {loading && quizzes.length === 0 ? (
-        <div className="flex items-center gap-2 text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin"/> Loading quizzes…</div>
+      {loading ? (
+        <div className="flex items-center gap-2 text-muted-foreground">
+          <Loader2 className="h-4 w-4 animate-spin"/> 
+          Loading quizzes…
+        </div>
+      ) : quizzes.length === 0 ? (
+        <div className="text-center py-8">
+          <p className="text-muted-foreground">No quizzes available at the moment.</p>
+        </div>
       ) : null}
       <div className="grid md:grid-cols-3 gap-4">
         {quizzes.map((quiz, index) => (
@@ -39,13 +47,26 @@ export default function Quizzes() {
             </CardHeader>
             <CardContent>
               <div className="flex items-center justify-between mb-3">
-                <span className="text-sm text-muted-foreground">
+                <div className="text-sm text-muted-foreground">
                   {quiz.last_result ? (
-                    <>Attempted • {quiz.last_result.score}/{quiz.last_result.total_questions}{typeof quiz.attempts_left === 'number' ? ` • Attempts left: ${quiz.attempts_left}` : ''}</>
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <Trophy className="h-3 w-3" />
+                        Score: {quiz.last_result.score}/{quiz.last_result.total_questions}
+                      </div>
+                      {typeof quiz.attempts_left === 'number' && (
+                        <div>Attempts left: {quiz.attempts_left}</div>
+                      )}
+                    </div>
                   ) : (
-                    <>Not attempted{typeof quiz.attempts_left === 'number' ? ` • Attempts left: ${quiz.attempts_left}` : ''}</>
+                    <div>
+                      Not attempted
+                      {typeof quiz.attempts_left === 'number' && (
+                        <div>Attempts: {quiz.attempts_left}</div>
+                      )}
+                    </div>
                   )}
-                </span>
+                </div>
                 <Badge variant={
                   quiz.difficulty === 'Easy' ? 'secondary' :
                   quiz.difficulty === 'Medium' ? 'default' : 'destructive'
@@ -53,9 +74,17 @@ export default function Quizzes() {
                   {quiz.difficulty ?? '—'}
                 </Badge>
               </div>
+              
+              {quiz.nasa_topic && (
+                <div className="mb-3 text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded">
+                  NASA Topic: {quiz.nasa_topic}
+                </div>
+              )}
+              
               {quiz.attempted && (quiz.attempts_left ?? 0) <= 0 ? (
-                <Button className="w-full" variant="outline" size="sm" onClick={() => navigate(`/quizzes/${quiz.id}`)}>
-                  View Result
+                <Button className="w-full" variant="outline" size="sm" onClick={() => navigate(`/results`)}>
+                  <Trophy className="h-4 w-4 mr-2" />
+                  View Results
                 </Button>
               ) : (
                 <Button className="w-full" size="sm" onClick={() => {

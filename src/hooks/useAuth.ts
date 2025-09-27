@@ -123,6 +123,7 @@ export const useAuth = () => {
   }
 
   const fetchUserProfile = async (userId: string) => {
+    console.log('useAuth: Fetching profile for user:', userId)
     try {
       const { data, error, status } = await supabase
         .from('profiles')
@@ -130,23 +131,28 @@ export const useAuth = () => {
         .eq('user_id', userId)
         .single()
 
+      console.log('useAuth: Profile fetch result:', { data, error, status })
+
       if (error) {
         // If no row found (status 406/404), try to create a default profile
         if (status === 406 || status === 404) {
+          console.log('useAuth: Profile not found, creating default profile')
           await ensureProfile(userId)
           return
         }
-        console.error('Error fetching profile:', error)
+        console.error('useAuth: Error fetching profile:', error)
         return
       }
 
+      console.log('useAuth: Setting profile data:', data)
       setProfile(data)
     } catch (error) {
-      console.error('Error fetching profile:', error)
+      console.error('useAuth: Error fetching profile:', error)
     }
   }
 
   const ensureProfile = async (userId: string) => {
+    console.log('useAuth: Ensuring profile exists for user:', userId)
     try {
       // Use email prefix as a default display name if available in session
       const email = session?.user?.email ?? ''

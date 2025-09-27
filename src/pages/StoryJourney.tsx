@@ -29,11 +29,13 @@ export default function StoryJourney() {
 
   useEffect(() => {
     // Wait for auth state to resolve; if not authenticated, send to auth with redirect back to this page
+    console.log('StoryJourney: Auth state check - loading:', loading, 'isAuthenticated:', isAuthenticated, 'isGuest:', isGuest)
     if (!loading && !isAuthenticated) {
       const from = encodeURIComponent(location.pathname + location.search)
+      console.log('StoryJourney: Redirecting to auth with redirect:', from)
       navigate(`/auth?redirect=${from}`)
     }
-  }, [isAuthenticated, loading, navigate, location])
+  }, [isAuthenticated, loading, navigate, location, isGuest])
 
   // When coming back from a chapter with a completion, refresh progress and surface a toast
   useEffect(() => {
@@ -113,12 +115,20 @@ export default function StoryJourney() {
 
   useEffect(() => {
     const fetchChapters = async () => {
+      console.log('StoryJourney: Fetching story chapters...')
       const { data, error } = await supabase
         .from('story_chapters')
         .select('*')
         .order('chapter_number')
 
+      console.log('StoryJourney: Chapters result:', { data, error })
+      
+      if (error) {
+        console.error('StoryJourney: Error fetching chapters:', error)
+      }
+      
       if (data) {
+        console.log('StoryJourney: Setting chapters:', data.length, 'chapters found')
         setStoryChapters(data)
       }
       setChaptersLoading(false)

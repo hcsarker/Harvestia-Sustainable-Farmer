@@ -63,11 +63,14 @@ export const useUserProgress = () => {
       if (courseError) throw courseError
 
       // Fetch story progress
+      console.log('useUserProgress: Fetching story progress for user:', user.id)
       const { data: storyData, error: storyError } = await supabase
         .from('user_story_progress')
         .select('*')
         .eq('user_id', user.id)
 
+      console.log('useUserProgress: Story progress result:', { storyData, storyError })
+      
       if (storyError) throw storyError
 
       // Fetch game scores

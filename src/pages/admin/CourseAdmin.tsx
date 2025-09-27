@@ -50,9 +50,9 @@ export default function CourseAdmin() {
   const [editForm, setEditForm] = useState<Editable>(emptyForm)
   const [editQfText, setEditQfText] = useState('')
   const [selectedCourse, setSelectedCourse] = useState<string>('')
-  const [lessons, setLessons] = useState<Array<{ id: string; title: string; minutes: number; order_index: number }>>([])
-  const [newLesson, setNewLesson] = useState<{ title: string; minutes: number }>({ title: '', minutes: 10 })
-
+  const [lessons, setLessons] = useState<Array<{ id: string; title: string; duration_minutes: number; order_index: number }>>([])
+  const [newLesson, setNewLesson] = useState<{ title: string; duration_minutes: number }>({ title: '', duration_minutes: 10 })
+  
   const isAdmin = useMemo(() => {
     if (!user || isGuest) return false
     const allowRaw = (import.meta as unknown as { env: Record<string, string | undefined> }).env?.VITE_ADMIN_EMAILS
@@ -174,7 +174,7 @@ export default function CourseAdmin() {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data, error } = await (supabase as any)
         .from('course_lessons')
-        .select('id,title,minutes,order_index')
+        .select('id,title,duration_minutes,order_index')
         .eq('course_id', selectedCourse)
         .order('order_index', { ascending: true })
       if (error) {
@@ -191,21 +191,21 @@ export default function CourseAdmin() {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data, error } = await (supabase as any)
       .from('course_lessons')
-      .insert({ course_id: selectedCourse, title: newLesson.title.trim(), minutes: Math.max(1, Number(newLesson.minutes || 1)), order_index: lessons.length })
-      .select('id,title,minutes,order_index')
+      .insert({ course_id: selectedCourse, title: newLesson.title.trim(), duration_minutes: Math.max(1, Number(newLesson.duration_minutes || 1)), order_index: lessons.length })
+      .select('id,title,duration_minutes,order_index')
       .single()
     if (error) { toast({ variant: 'destructive', title: 'Add lesson failed', description: error.message }); return }
     setLessons(list => [...list, data])
-    setNewLesson({ title: '', minutes: 10 })
+    setNewLesson({ title: '', duration_minutes: 10 })
   }
 
-  const updateLesson = async (id: string, patch: Partial<{ title: string; minutes: number }>) => {
+  const updateLesson = async (id: string, patch: Partial<{ title: string; duration_minutes: number }>) => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data, error } = await (supabase as any)
       .from('course_lessons')
       .update(patch)
       .eq('id', id)
-      .select('id,title,minutes,order_index')
+      .select('id,title,duration_minutes,order_index')
       .single()
     if (error) { toast({ variant: 'destructive', title: 'Update lesson failed', description: error.message }); return }
     setLessons(list => list.map(l => l.id === id ? data : l))
@@ -505,8 +505,8 @@ export default function CourseAdmin() {
               </div>
               <div>
                 <Label>Minutes</Label>
-                <Input type="number" min={1} value={newLesson.minutes}
-                  onChange={(e) => setNewLesson(s => ({ ...s, minutes: Math.max(1, Number(e.target.value || 1)) }))}
+                <Input type="number" min={1} value={newLesson.duration_minutes}
+                  onChange={(e) => setNewLesson(s => ({ ...s, duration_minutes: Math.max(1, Number(e.target.value || 1)) }))}
                 />
               </div>
               <div className="md:col-span-3">
@@ -518,7 +518,7 @@ export default function CourseAdmin() {
                 <div key={l.id} className="flex items-center justify-between border rounded-md p-2">
                   <div className="flex-1">
                     <div className="font-medium text-sm">{l.title}</div>
-                    <div className="text-xs text-muted-foreground">{l.minutes} min</div>
+                    <div className="text-xs text-muted-foreground">{l.duration_minutes} min</div>
                   </div>
                   <div className="flex items-center gap-2">
                     <Button size="sm" variant="outline" onClick={() => moveLesson(l.id, -1)}>↑</Button>

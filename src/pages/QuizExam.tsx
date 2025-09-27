@@ -7,7 +7,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
-import { useQuizExam, type QuizExamData, type QuizSubmissionResult, type QuizQuestion } from '@/hooks/useQuizExam'
+import { useQuizExam, type QuizData, type QuizResult, type QuizQuestion } from '@/hooks/useQuizExam'
 import { useAuth } from '@/hooks/useAuth'
 import { Loader2, ChevronLeft, ChevronRight, Timer, Trophy, CheckCircle2, XCircle } from 'lucide-react'
 
@@ -18,18 +18,18 @@ export default function QuizExam() {
   const navigate = useNavigate()
   const { loading, getQuizWithQuestions, submitQuizAnswers } = useQuizExam()
   const { isAuthenticated, isGuest, loading: authLoading } = useAuth()
-  const [quiz, setQuiz] = useState<QuizExamData | null>(null)
+  const [quiz, setQuiz] = useState<QuizData | null>(null)
   const [current, setCurrent] = useState(0)
   const [answers, setAnswers] = useState<Answers>({})
   const [submitting, setSubmitting] = useState(false)
-  const [result, setResult] = useState<QuizSubmissionResult | null>(null)
+  const [result, setResult] = useState<QuizResult | null>(null)
   const [secondsLeft, setSecondsLeft] = useState<number | null>(null)
   const [startAt, setStartAt] = useState<number | null>(null)
   const [staleLoad, setStaleLoad] = useState(false)
 
   // Total time: 60s per question
   const totalSeconds = useMemo(() => {
-    return (quiz?.questions_count || quiz?.quiz_questions?.length || 0) * 60
+    return (quiz?.questions_count || quiz?.questions?.length || 0) * 60
   }, [quiz])
 
   // Initialize timer start once when quiz is available
@@ -90,24 +90,38 @@ export default function QuizExam() {
   useEffect(() => {
     let active = true
     async function run() {
-      if (!quizId) return
-      const q = await getQuizWithQuestions(quizId)
-      if (active) {
-        setQuiz(q)
+      if (!quizId) {
+        console.log('QuizExam: No quizId provided')
+        return
+      }
+      console.log('QuizExam: Loading quiz with ID:', quizId)
+      try {
+        const q = await getQuizWithQuestions(quizId)
+        console.log('QuizExam: Quiz loaded successfully:', q)
+        if (active) {
+          setQuiz(q)
+          if (!q) {
+            console.error('QuizExam: Quiz is null after loading')
+          } else {
+            console.log('QuizExam: Quiz questions count:', q.quiz_questions?.length)
+          }
+        }
+      } catch (error) {
+        console.error('QuizExam: Error loading quiz:', error)
       }
     }
     void run()
     return () => { active = false }
   }, [quizId, getQuizWithQuestions])
 
-  const total = quiz?.quiz_questions?.length ?? 0
+  const total = quiz?.questions?.length ?? 0
   const progress = useMemo(() => {
     if (!total) return 0
     const answered = Object.keys(answers).length
     return Math.round((answered / total) * 100)
   }, [answers, total])
 
-  const currentQuestion = quiz?.quiz_questions?.[current]
+  const currentQuestion = quiz?.questions?.[current]
 
   const onSelect = (questionId: string, value: string) => {
     setAnswers((a) => ({ ...a, [questionId]: value }))

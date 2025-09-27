@@ -5,8 +5,16 @@ import { useUserProgress } from '@/hooks/useUserProgress'
 
 type CertificateRow = {
   id: string
-  course_id: string | null
-  title: string
+  user_id: string
+  course_id: string
+  certificate_name: string
+  certificate_number: string
+  issued_date: string
+  certificate_type: string
+  completion_percentage: number
+  total_score: number | null
+  time_spent_hours: number | null
+  is_verified: boolean
   metadata: Record<string, unknown> | null
 }
 
@@ -83,24 +91,29 @@ export function useCertificates() {
         // Load base data in parallel
         const [{ data: courseData }, { data: certData }] = await Promise.all([
           supabase.from('courses').select('id,title,description,instructor,duration,difficulty,rating,students_count,certificate,lessons_count'),
-          // certificates might not be in generated types yet; cast to any
+          // Load user's certificates with new structure
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          (supabase as any).from('certificates').select('id,course_id,title,metadata'),
+          (supabase as any).from('certificates').select('id,user_id,course_id,certificate_name,certificate_number,issued_date,certificate_type,completion_percentage,total_score,time_spent_hours,is_verified,metadata'),
         ])
         if (!canceled) {
           setCourses(courseData || [])
           setCerts((certData as CertificateRow[]) || [])
         }
         if (user && !isGuest) {
-          const [{ data: progData }, { data: uCertData }] = await Promise.all([
+          const [{ data: progData }] = await Promise.all([
             supabase.from('user_course_progress').select('course_id,progress,completed').eq('user_id', user.id),
-            // user_certificates might not be in generated types yet; cast to any
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            (supabase as any).from('user_certificates').select('id,user_id,certificate_id,issued_at,verification_code').eq('user_id', user.id),
           ])
           if (!canceled) {
             setProgress((progData as ProgressRow[]) || [])
-            setUserCerts((uCertData as UserCertificateRow[]) || [])
+            // Filter certificates for current user
+            const userCertificates = (certData as CertificateRow[])?.filter(cert => cert.user_id === user.id) || []
+            setUserCerts(userCertificates.map(cert => ({
+              id: cert.id,
+              user_id: cert.user_id,
+              certificate_id: cert.id,
+              issued_at: cert.issued_date,
+              verification_code: cert.certificate_number
+            })))
           }
         } else {
           if (!canceled) {
@@ -139,22 +152,26 @@ export function useCertificates() {
   }
   const userName = (nameCandidates.find(Boolean) as string | undefined) || prettyFromEmail(userEmail) || 'Valued Learner'
   const data = useMemo(() => {
-      // Consider all courses; if a course lacks a certificate record, still show a generic certificate when completed
+      // Consider all courses; show certificates based on new dynamic structure
       const eligibleCourses = courses
     const progMap = new Map(progress.map(p => [p.course_id, p]))
-    const certByCourse = new Map<string, CertificateRow | undefined>()
+    
+    // Map certificates by course_id for easier lookup
+    const userCertsByCourse = new Map<string, CertificateRow>()
     for (const cert of certs) {
-      if (cert.course_id) certByCourse.set(cert.course_id, cert)
+      if (cert.course_id && (!user || cert.user_id === user?.id)) {
+        userCertsByCourse.set(cert.course_id, cert)
+      }
     }
-    const userCertSet = new Set(userCerts.map(uc => uc.certificate_id))
 
     const list: UiCertificate[] = eligibleCourses.map(c => {
       const p = progMap.get(c.id)
-      const cert = certByCourse.get(c.id)
-      // Consider earned if a certificate issuance exists OR the course is marked completed in progress
-      const earned = (cert ? userCertSet.has(cert.id) : false) || (!!p && p.completed)
+      const cert = userCertsByCourse.get(c.id)
+      
+      // Consider earned if user has a certificate for this course OR course is completed
+      const earned = !!cert || (!!p && p.completed)
       const status: UiCertificate['status'] = earned ? 'earned' : (p && (p.progress ?? 0) > 0 ? 'in-progress' : 'available')
-        const issued = earned ? (userCerts.find(uc => uc.certificate_id === cert?.id)?.issued_at ?? null) : null
+      const issued = cert?.issued_date ?? null
       // Real PDF generator (on-demand) using jsPDF via dynamic import
       const download = async () => {
         if (!earned) return
@@ -249,10 +266,10 @@ export function useCertificates() {
           doc.text(userName, pageWidth / 2, 210, { align: 'center' })
 
           // Course details
-          const courseTitle = cert?.title || c.title
+          const courseTitle = cert?.certificate_name || c.title
           const issuedOn = issued ?? new Date().toISOString().slice(0, 10)
           const instructor = c.instructor ?? 'Instructor'
-          const credentialId = userCerts.find(uc => uc.certificate_id === cert?.id)?.verification_code ?? null
+          const credentialId = cert?.certificate_number ?? null
           if (template === 'modern') doc.setTextColor(34, 68, 48)
           doc.setFont('times', 'italic')
           doc.setFontSize(15)
@@ -364,7 +381,7 @@ export function useCertificates() {
           // Fallback to text download if jsPDF not available
           const lines = [
             `Certificate of Completion`,
-            `Course: ${cert?.title || c.title}`,
+            `Course: ${cert?.certificate_name || c.title}`,
             `User: ${userName}`,
             `Issued: ${issued ?? new Date().toISOString().slice(0,10)}`
           ]
@@ -382,14 +399,14 @@ export function useCertificates() {
       return {
           id: cert?.id || c.id,
         courseId: c.id,
-          title: cert?.title || c.title,
+          title: cert?.certificate_name || c.title,
         description: c.description ?? '',
         instructor: c.instructor ?? 'Instructor',
         issueDate: issued,
         status,
-        grade: null,
-        score: p?.progress ?? 0,
-          credentialId: userCerts.find(uc => uc.certificate_id === cert?.id)?.verification_code ?? null,
+        grade: cert?.metadata?.grade as string ?? null,
+        score: cert?.total_score ?? p?.progress ?? 0,
+          credentialId: cert?.certificate_number ?? null,
         skills: [],
         hoursCompleted: p ? Math.round(((p.progress ?? 0) / 100) * (c.lessons_count ?? 0) * 0.5) : 0,
         totalHours: Math.round((c.lessons_count ?? 0) * 0.5),
@@ -403,7 +420,7 @@ export function useCertificates() {
     const available = list.filter(l => l.status === 'available')
 
     return { earned, inProgress, available, all: list }
-  }, [courses, progress, certs, userCerts, userName])
+  }, [courses, progress, certs, userName, user])
 
   return { loading, error, ...data }
 }

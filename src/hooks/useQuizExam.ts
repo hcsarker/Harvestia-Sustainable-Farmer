@@ -45,36 +45,52 @@ export function useQuizExam() {
   const { user } = useAuth()
   const { toast } = useToast()
   const [loading, setLoading] = useState(false)
+  
+
 
   const getQuizWithQuestions = useCallback(async (quizId: string): Promise<QuizData | null> => {
+    console.log('useQuizExam: Getting quiz with ID:', quizId)
     setLoading(true)
     try {
-      // Get quiz info
+      // Get quiz from database
       const { data: quiz, error: quizError } = await supabase
         .from('quizzes')
-        .select('id, title, difficulty, nasa_topic, questions_count, attempts_allowed')
+        .select('id, title, difficulty, nasa_topic, questions_count')
         .eq('id', quizId)
         .single()
 
-      if (quizError) {
+      console.log('useQuizExam: Database query result:', { quiz, quizError })
+
+      if (quizError || !quiz) {
+        console.error('useQuizExam: Quiz not found in database:', quizError)
         toast({ title: 'Error', description: 'Quiz not found', variant: 'destructive' })
         return null
       }
 
-      // Get quiz questions
+      // Get quiz questions from database
       const { data: questions, error: questionsError } = await supabase
         .from('quiz_questions')
         .select('id, question, options, correct_answer, explanation')
         .eq('quiz_id', quizId)
-        .order('created_at')
+
+      console.log('useQuizExam: Questions query result:', { questions, questionsError })
 
       if (questionsError) {
-        toast({ title: 'Error', description: 'Failed to load questions', variant: 'destructive' })
+        console.error('useQuizExam: Failed to load questions - Error details:', questionsError)
+        console.error('useQuizExam: Error message:', questionsError.message)
+        console.error('useQuizExam: Error details:', questionsError.details)
+        toast({ title: 'Error', description: `Failed to load questions: ${questionsError.message}`, variant: 'destructive' })
+        return null
+      }
+
+      if (!questions || questions.length === 0) {
+        console.error('useQuizExam: No questions found for quiz:', quizId)
+        toast({ title: 'Error', description: 'No questions found for this quiz', variant: 'destructive' })
         return null
       }
 
       // Process questions to ensure correct types
-      const processedQuestions: QuizQuestion[] = (questions || []).map(q => ({
+      const processedQuestions: QuizQuestion[] = questions.map(q => ({
         ...q,
         options: Array.isArray(q.options) ? q.options as string[] : 
                 typeof q.options === 'string' ? [q.options] : []
@@ -92,11 +108,16 @@ export function useQuizExam() {
         attempts_used = results?.length || 0
       }
 
-      const attempts_allowed = quiz.attempts_allowed || 5
+      const attempts_allowed = 5 // Default attempts
       const attempts_left = Math.max(0, attempts_allowed - attempts_used)
 
       return {
-        ...quiz,
+        id: quiz.id,
+        title: quiz.title,
+        difficulty: quiz.difficulty,
+        nasa_topic: quiz.nasa_topic,
+        questions_count: quiz.questions_count,
+        attempts_allowed,
         questions: processedQuestions,
         attempts_left
       }
@@ -227,8 +248,10 @@ export function useQuizExam() {
       return (data || []).map(result => ({
         ...result,
         percentage: Math.round((result.score / result.total_questions) * 100),
-        quiz_title: (result.quizzes as any).title,
-        quiz_difficulty: (result.quizzes as any).difficulty
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        quiz_title: (result.quizzes as any)?.title || 'Unknown Quiz',
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        quiz_difficulty: (result.quizzes as any)?.difficulty || 'Unknown'
       }))
 
     } catch (error) {
