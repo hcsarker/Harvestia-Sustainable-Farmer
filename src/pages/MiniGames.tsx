@@ -146,23 +146,22 @@ const miniGames = [
     gameId: undefined,
     gameUrl: undefined
   },
-  
-{
-  id: 9,
-  title: "Smart Farming Simulator",
-  description: "Smart Farming Simulator is an engaging Unity WebGL game where players manage a modern farm using IoT devices and sustainable practices.",
-  category: "Unity Game",
-  difficulty: "Easy",
-  duration: "10 min",
-  highScore: 1000,
-  players: 100,
-  rating: 4.5,
-  icon: Target,
-  color: "bg-blue-600",
-  isUnityGame: true,
-  gameId: "custom-game", // বা
-  gameUrl: "https://imtiazahmeddipto.itch.io/smartfarming"
-}
+  {
+    id: 9,
+    title: "Smart Farming Simulator",
+    description: "Smart Farming Simulator is an engaging Unity WebGL game where players manage a modern farm using IoT devices and sustainable practices.",
+    category: "Unity Game",
+    difficulty: "Easy",
+    duration: "10 min",
+    highScore: 1000,
+    players: 100,
+    rating: 4.5,
+    icon: Target,
+    color: "bg-blue-600",
+    isUnityGame: true,
+    gameId: "custom-game",
+    gameUrl: "https://imtiazahmeddipto.itch.io/smartfarming"
+  }
 
 ]
 
@@ -173,6 +172,16 @@ export default function MiniGames() {
   const totalPlayers = miniGames.reduce((sum, game) => sum + game.players, 0);
   const avgRating = (miniGames.reduce((sum, game) => sum + game.rating, 0) / totalGames).toFixed(1);
   const highestScore = Math.max(...miniGames.map(game => game.highScore));
+
+  const handleGameClick = (game: typeof miniGames[0]) => {
+    if (!game.isUnityGame) {
+      // For non-Unity games, show coming soon message
+      const message = game.category === 'Quiz' 
+        ? `${game.title} - Visit the Quizzes section to test your knowledge!`
+        : `${game.title} - Coming Soon! This educational game will be available in the next update.`;
+      alert(message);
+    }
+  };
 
   return (
     <div className="container py-6">
@@ -241,6 +250,7 @@ export default function MiniGames() {
                 isUnityGame={game.isUnityGame}
                 gameId={game.gameId}
                 gameUrl={game.gameUrl}
+                onClick={() => handleGameClick(game)}
               />
             ))}
           </div>

@@ -34,6 +34,29 @@ import { useAuth } from "@/hooks/useAuth";
 const queryClient = new QueryClient();
 
 function LayoutWrapper() {
+  // Color consistency enforcer
+  React.useEffect(() => {
+    // Ensure consistent color scheme across environments
+    const enforceColorConsistency = () => {
+      const root = document.documentElement;
+      
+      // Force reload CSS variables in production
+      if (import.meta.env.PROD) {
+        root.style.setProperty('--primary', '82 84% 32%');
+        root.style.setProperty('--secondary', '25 45% 85%'); 
+        root.style.setProperty('--accent', '35 65% 55%');
+        root.style.setProperty('--background', '45 20% 97%');
+        root.style.setProperty('--foreground', '25 15% 15%');
+      }
+    };
+
+    enforceColorConsistency();
+    
+    // Re-enforce on page load
+    window.addEventListener('load', enforceColorConsistency);
+    return () => window.removeEventListener('load', enforceColorConsistency);
+  }, []);
+
   return (
     <Layout>
       <Outlet />

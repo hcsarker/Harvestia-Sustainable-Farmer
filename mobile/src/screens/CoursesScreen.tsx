@@ -318,23 +318,6 @@ const CoursesScreen = () => {
   );
 };
 
-      <View style={styles.coursesContainer}>
-        {courses.map((course) => (
-          <TouchableOpacity 
-            key={course.id} 
-            style={styles.courseCard}
-            onPress={() => handleCoursePress(course)}
-          >
-            <Text style={styles.courseTitle}>{course.title}</Text>
-            <Text style={styles.courseDescription}>{course.description}</Text>
-            <Text style={styles.difficulty}>📊 {course.difficulty}</Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-    </ScrollView>
-  );
-};
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,

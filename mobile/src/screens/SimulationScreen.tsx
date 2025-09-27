@@ -273,7 +273,7 @@ const SimulationScreen: React.FC = () => {
                 styles.scenarioCard,
                 gameState.mode === key && styles.selectedCard
               ]}
-              onPress={() => setGameState(prev => ({ ...prev, mode: key as any }))}
+              onPress={() => setGameState(prev => ({ ...prev, mode: key as GameState['mode'] }))}
             >
               <View style={styles.scenarioHeader}>
                 <Text style={styles.scenarioIcon}>{scenario.icon}</Text>
@@ -313,7 +313,7 @@ const SimulationScreen: React.FC = () => {
                   styles.optionCard,
                   gameState.crop === crop.id && styles.selectedOptionCard
                 ]}
-                onPress={() => setGameState(prev => ({ ...prev, crop: crop.id as any }))}
+                onPress={() => setGameState(prev => ({ ...prev, crop: crop.id as GameState['crop'] }))}
               >
                 <Text style={styles.optionIcon}>{crop.icon}</Text>
                 <Text style={styles.optionName}>{crop.name}</Text>
@@ -335,7 +335,7 @@ const SimulationScreen: React.FC = () => {
                   styles.soilCard,
                   gameState.soilType === soil.id && styles.selectedSoilCard
                 ]}
-                onPress={() => setGameState(prev => ({ ...prev, soilType: soil.id as any }))}
+                onPress={() => setGameState(prev => ({ ...prev, soilType: soil.id as GameState['soilType'] }))}
               >
                 <Text style={styles.soilName}>{soil.name}</Text>
                 <View style={styles.soilProperties}>

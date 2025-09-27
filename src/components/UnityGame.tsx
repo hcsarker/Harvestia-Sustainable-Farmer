@@ -42,10 +42,17 @@ export function UnityGame({
     'plant-game': {
       url: 'https://www.addictinggames.com/embed/html5-games/24609',
       title: 'Plant Growing Game'
+    },
+    'custom-game': {
+      url: 'https://imtiazahmeddipto.itch.io/smartfarming',
+      title: 'Smart Farming Simulator'
     }
   }
 
-  const currentGame = gameUrl ? { url: gameUrl, title } : defaultGames[gameId as keyof typeof defaultGames]
+  // Prioritize gameUrl if provided, otherwise use default game mappings
+  const currentGame = gameUrl 
+    ? { url: gameUrl, title } 
+    : defaultGames[gameId as keyof typeof defaultGames]
 
   const handleStartGame = () => {
     setIsLoading(true)
@@ -78,7 +85,7 @@ export function UnityGame({
       <Card className="p-4">
         <div className="text-center text-muted-foreground">
           <p>Game not found: {gameId}</p>
-          <p className="text-sm mt-2">Available games: crop-rotation, farming-sim, plant-game</p>
+          <p className="text-sm mt-2">Available games: crop-rotation, farming-sim, plant-game, custom-game</p>
         </div>
       </Card>
     )
@@ -175,7 +182,8 @@ export function UnityGame({
                 frameBorder="0"
                 allowFullScreen
                 className="rounded-lg"
-                title={currentGame.title}
+                title={`${currentGame.title} - Interactive Game`}
+                aria-label={`Play ${currentGame.title}`}
                 onLoad={() => setIsLoading(false)}
               />
             )}

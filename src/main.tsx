@@ -4,6 +4,30 @@ import './index.css'
 // Early diagnostics
 console.log('[main] starting bootstrap');
 
+// Global color consistency enforcer - runs before React mounts
+(() => {
+  const enforceGlobalColors = () => {
+    const root = document.documentElement;
+    // Ensure critical color variables are set immediately
+    root.style.setProperty('--primary', '82 84% 32%');
+    root.style.setProperty('--secondary', '25 45% 85%');
+    root.style.setProperty('--accent', '35 65% 55%');
+    root.style.setProperty('--background', '45 20% 97%');
+    root.style.setProperty('--foreground', '25 15% 15%');
+    
+    // Add consistency marker
+    root.setAttribute('data-color-consistency', 'enforced');
+  };
+  
+  // Run immediately
+  enforceGlobalColors();
+  
+  // Run on DOM ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', enforceGlobalColors);
+  }
+})();
+
 // In dev, aggressively unregister any service workers that might be intercepting
 // module requests and causing dynamic import failures.
 if (import.meta.env.DEV && 'serviceWorker' in navigator) {

@@ -29,7 +29,13 @@ export function Layout({ children }: LayoutProps) {
   const { user, profile, isGuest, isAuthenticated, signOut } = useAuth()
   return (
     <SidebarProvider>
-  <div className="min-h-screen flex w-full">
+      {/* Hidden color preloader to ensure all critical colors are available */}
+      <div className="force-color-preload">
+        <div className="bg-green-500 bg-green-600 bg-blue-500 bg-blue-600 bg-purple-500 bg-purple-600"></div>
+        <div className="bg-orange-500 bg-orange-600 bg-emerald-500 bg-emerald-600 bg-indigo-500 bg-indigo-600"></div>
+        <div className="text-primary text-secondary text-accent"></div>
+      </div>
+      <div className="min-h-screen flex w-full">
         {/* Top loading heartbeat */}
         {isFetching > 0 && (
           <div className="fixed top-0 left-0 right-0 z-[100] h-1 bg-gradient-to-r from-green-500 via-emerald-400 to-lime-400 animate-pulse" />
