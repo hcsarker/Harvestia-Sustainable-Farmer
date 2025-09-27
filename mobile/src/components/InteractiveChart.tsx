@@ -4,8 +4,11 @@ import { View, Text, StyleSheet, Dimensions } from 'react-native';
 const { width: screenWidth } = Dimensions.get('window');
 
 interface ChartData {
-  day: string;
-  ndvi: number;
+  day?: string;
+  date?: string;
+  ndvi?: number;
+  value?: number;
+  label?: string;
 }
 
 interface InteractiveChartProps {
@@ -13,8 +16,17 @@ interface InteractiveChartProps {
 }
 
 const InteractiveChart: React.FC<InteractiveChartProps> = ({ data }) => {
-  const maxValue = Math.max(...data.map(d => d.ndvi));
-  const minValue = Math.min(...data.map(d => d.ndvi));
+  if (!data || data.length === 0) {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.noDataText}>No data available</Text>
+      </View>
+    );
+  }
+
+  const values = data.map(d => d.value ?? d.ndvi ?? 0);
+  const maxValue = Math.max(...values);
+  const minValue = Math.min(...values);
   const range = maxValue - minValue || 1;
 
   return (
@@ -23,7 +35,11 @@ const InteractiveChart: React.FC<InteractiveChartProps> = ({ data }) => {
       <View style={styles.chartArea}>
         <View style={styles.barsContainer}>
           {data.map((item, index) => {
-            const height = ((item.ndvi - minValue) / range) * 120 + 20;
+            const dataValue = item.value ?? item.ndvi ?? 0;
+            const height = ((dataValue - minValue) / range) * 120 + 20;
+            const displayDate = item.date ? new Date(item.date).getDate().toString() : item.day ?? index.toString();
+            const displayValue = item.label ?? (item.value?.toFixed(1)) ?? (item.ndvi?.toFixed(2)) ?? '0';
+            
             return (
               <View key={index} style={styles.barWrapper}>
                 <View 
@@ -32,8 +48,8 @@ const InteractiveChart: React.FC<InteractiveChartProps> = ({ data }) => {
                     { height }
                   ]} 
                 />
-                <Text style={styles.barLabel}>{item.day}</Text>
-                <Text style={styles.barValue}>{item.ndvi}</Text>
+                <Text style={styles.barLabel}>{displayDate}</Text>
+                <Text style={styles.barValue}>{displayValue}</Text>
               </View>
             );
           })}
@@ -41,7 +57,7 @@ const InteractiveChart: React.FC<InteractiveChartProps> = ({ data }) => {
       </View>
       
       <Text style={styles.description}>
-        Vegetation health over time (NDVI index from satellite data)
+        Data visualization from NASA satellite sensors
       </Text>
     </View>
   );
@@ -90,6 +106,12 @@ const styles = StyleSheet.create({
     color: '#64748b',
     textAlign: 'center',
     marginTop: 8,
+  },
+  noDataText: {
+    fontSize: 14,
+    color: '#64748b',
+    textAlign: 'center',
+    padding: 20,
   },
 });
 

@@ -1,55 +1,49 @@
-import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { Card, CardContent } from "@/components/ui/card"
+import { cn } from "@/lib/utils"
+import { LucideIcon } from "lucide-react"
 
 interface StatsCardProps {
-  title: string;
-  value: string;
-  icon: string;
-  color?: string;
+  title: string
+  value: string | number | React.ReactNode
+  icon: LucideIcon
+  trend?: {
+    value: number
+    isPositive: boolean
+  }
+  className?: string
+  animate?: boolean
 }
 
-const StatsCard: React.FC<StatsCardProps> = ({ title, value, icon, color = '#8B5CF6' }) => {
+export function StatsCard({ title, value, icon: Icon, trend, className, animate = true }: StatsCardProps) {
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.icon}>{icon}</Text>
-        <Text style={styles.title}>{title}</Text>
-      </View>
-      <Text style={[styles.value, { color }]}>{value}</Text>
-    </View>
-  );
-};
-
-const styles = StyleSheet.create({
-  container: {
-    backgroundColor: '#ffffff',
-    padding: 16,
-    borderRadius: 12,
-    flex: 0.48,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  icon: {
-    fontSize: 20,
-    marginRight: 8,
-  },
-  title: {
-    fontSize: 14,
-    color: '#64748b',
-    fontWeight: '500',
-  },
-  value: {
-    fontSize: 24,
-    fontWeight: '700',
-  },
-});
-
-export default StatsCard;
+    <Card className={cn(
+      "hover:shadow-lg transition-all duration-300",
+      animate && "hover:scale-105 hover:shadow-primary/10",
+      className
+    )}>
+      <CardContent className="p-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm font-medium text-muted-foreground">{title}</p>
+            <div className="flex items-center space-x-2">
+              <h3 className="text-2xl font-bold text-foreground">{value}</h3>
+              {trend && (
+                <span className={cn(
+                  "text-xs px-2 py-1 rounded-full",
+                  trend.isPositive 
+                    ? "text-emerald-600 bg-emerald-100 dark:text-emerald-400 dark:bg-emerald-900/30" 
+                    : "text-red-600 bg-red-100 dark:text-red-400 dark:bg-red-900/30"
+                )}>
+                  {trend.isPositive ? '+' : ''}{trend.value}%
+                </span>
+              )}
+            </div>
+          </div>
+          <div className="p-3 rounded-full bg-primary/10 text-primary">
+            <Icon className={cn("h-6 w-6", animate && "animate-float")} />
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  )
+}

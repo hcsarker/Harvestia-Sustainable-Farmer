@@ -1,351 +1,758 @@
-import React, { useEffect, useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  RefreshControl,
-  Alert,
-} from 'react-native';
-import { useNavigation } from '@react-navigation/native';
-import { useSessionContext } from '../contexts/SessionContext';
+import React, { useEffect, useState } from 'react';import React, { useEffect, useState } from 'react';
 
-interface Course {
-  id: string;
-  title: string;
+import {import {
+
+  View,  View,
+
+  Text,  Text,
+
+  StyleSheet,  StyleSheet,
+
+  ScrollView,  Scrolconst CoursesScreen: React.FC = () => {
+
+  TouchableOpacity,  const navigation = useNavigation();
+
+  RefreshControl,  const { session, isGuest } = useSessionContext();
+
+  Alert,  
+
+} from 'react-native';  // Use real hooks from web for actual data
+
+import { useNavigation } from '@react-navigation/native';  const { courses: webCourses, loading: coursesLoading } = useCoursesCatalog();
+
+import { useSessionContext } from '../contexts/SessionContext';  const { courseProgress } = useUserProgress();
+
+  
+
+interface Course {  const [courses, setCourses] = useState<Course[]>(COURSES);
+
+  id: string;  const [refreshing, setRefreshing] = useState(false);
+
+  title: string;  const [filter, setFilter] = useState<'all' | 'beginner' | 'intermediate' | 'advanced'>('all');
+
   description: string;
-  instructor: string;
-  duration: string;
-  difficulty: 'Beginner' | 'Intermediate' | 'Advanced';
-  rating: number;
-  students: number;
-  certificate: boolean;
-  lessons: number;
-  progress?: number;
-  tags: string[];
-}
 
-const COURSES: Course[] = [
-  {
-    id: 'sustainable-farming',
-    title: 'Sustainable Farming Fundamentals',
-    description: 'Learn the basics of sustainable agriculture, soil health, and crop rotation techniques for long-term productivity.',
-    instructor: 'Dr. Sarah Johnson',
-    duration: '6 weeks',
-    difficulty: 'Beginner',
-    rating: 4.8,
-    students: 2340,
-    certificate: true,
-    lessons: 24,
-    tags: ['Sustainability', 'Soil Health'],
-  },
-  {
-    id: 'precision-agriculture',
-    title: 'Precision Agriculture with Technology',
-    description: 'Master modern farming techniques using GPS, sensors, and data analytics for optimized crop yields.',
-    instructor: 'Prof. Michael Chen',
-    duration: '8 weeks',
-    difficulty: 'Advanced',
-    rating: 4.9,
-    students: 1850,
-    certificate: true,
-    lessons: 32,
-    tags: ['Technology', 'Data Analytics'],
-  },
-  {
-    id: 'organic-farming',
-    title: 'Organic Farming Methods',
-    description: 'Comprehensive guide to organic farming practices, natural pest control, and certification processes.',
-    instructor: 'Maria Rodriguez',
-    duration: '5 weeks',
-    difficulty: 'Intermediate',
-    rating: 4.7,
-    students: 1920,
-    certificate: true,
-    lessons: 20,
-    tags: ['Organic', 'Certification'],
-  },
-  {
-    id: 'climate-smart-agriculture',
-    title: 'Climate-Smart Agriculture',
-    description: 'Adapt farming practices to climate change, improve resilience, and reduce environmental impact.',
-    instructor: 'Dr. James Wilson',
-    duration: '7 weeks',
-    difficulty: 'Intermediate',
-    rating: 4.8,
-    students: 2100,
-    certificate: true,
-    lessons: 28,
-    tags: ['Climate Change', 'Resilience'],
-  },
-  {
-    id: 'water-management',
-    title: 'Efficient Water Management',
-    description: 'Optimize irrigation systems, conserve water resources, and implement smart watering strategies.',
-    instructor: 'Dr. Lisa Park',
-    duration: '4 weeks',
-    difficulty: 'Beginner',
-    rating: 4.6,
-    students: 1750,
-    certificate: true,
-    lessons: 16,
-    tags: ['Water Conservation', 'Irrigation'],
-  },
-];
+  instructor: string;  useEffect(() => {
 
-export default function CoursesScreen() {
-  const navigation = useNavigation();
-  const { session, isGuest } = useSessionContext();
-  const [courses, setCourses] = useState<Course[]>(COURSES);
-  const [refreshing, setRefreshing] = useState(false);
-  const [filter, setFilter] = useState<'all' | 'beginner' | 'intermediate' | 'advanced'>('all');
+  duration: string;    // Use web courses if available, fallback to static data
 
-  useEffect(() => {
-    // Add progress for authenticated users
-    if (!isGuest) {
-      const coursesWithProgress = COURSES.map(course => ({
+  difficulty: 'Beginner' | 'Intermediate' | 'Advanced';    if (webCourses && webCourses.length > 0) {
+
+  rating: number;      const coursesWithProgress = webCourses.map(course => ({
+
+  students: number;        ...course,
+
+  certificate: boolean;        progress: courseProgress?.[course.id] || 0,
+
+  lessons: number;      }));
+
+  progress?: number;      setCourses(coursesWithProgress);
+
+  tags: string[];    } else if (!isGuest) {
+
+}      const coursesWithProgress = COURSES.map(course => ({
+
         ...course,
-        progress: Math.floor(Math.random() * 100),
-      }));
-      setCourses(coursesWithProgress);
-    } else {
-      setCourses(COURSES);
-    }
-  }, [isGuest]);
 
-  const onRefresh = async () => {
-    setRefreshing(true);
-    // Simulate API refresh
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    setRefreshing(false);
-  };
+const COURSES: Course[] = [        progress: Math.floor(Math.random() * 100),
 
-  const filteredCourses = courses.filter(course => {
-    if (filter === 'all') return true;
-    return course.difficulty.toLowerCase() === filter;
-  });
+  {      }));
 
-  const getDifficultyColor = (difficulty: string) => {
-    switch (difficulty) {
-      case 'Beginner': return '#10B981';
-      case 'Intermediate': return '#F59E0B';
-      case 'Advanced': return '#EF4444';
-      default: return '#6B7280';
-    }
-  };
+    id: 'sustainable-farming',      setCourses(coursesWithProgress);
 
-  const handleCoursePress = (course: Course) => {
-    if (isGuest) {
-      Alert.alert(
-        'Sign In Required',
-        'Create a free account to access full course content and track your progress.',
-        [
-          { text: 'Maybe Later', style: 'cancel' },
-          { text: 'Sign Up', onPress: () => navigation.navigate('Auth' as never) },
-        ]
-      );
-    } else {
-      Alert.alert('Course Access', `Opening "${course.title}"\n\nProgress: ${course.progress || 0}%`);
-    }
-  };
+    title: 'Sustainable Farming Fundamentals',    } else {
 
-  return (
-    <ScrollView 
-      style={styles.container}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-    >
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.title}>🎓 Learning Courses</Text>
-        <Text style={styles.subtitle}>
-          Master sustainable farming with expert-led courses
-        </Text>
-      </View>
+    description: 'Learn the basics of sustainable agriculture, soil health, and crop rotation techniques.',      setCourses(COURSES);
 
-      {/* Guest Notice */}
-      {isGuest && (
-        <TouchableOpacity 
-          style={styles.guestNotice}
-          onPress={() => navigation.navigate('Auth' as never)}
-        >
-          <Text style={styles.guestNoticeIcon}>🌟</Text>
-          <View style={styles.guestNoticeContent}>
-            <Text style={styles.guestNoticeTitle}>Unlock Full Learning Experience</Text>
-            <Text style={styles.guestNoticeText}>
-              Sign up to track progress, earn certificates, and access premium content
-            </Text>
-          </View>
-        </TouchableOpacity>
-      )}
+    instructor: 'Dr. Sarah Johnson',    }
 
-      {/* Filter Buttons */}
-      <ScrollView 
-        horizontal 
-        showsHorizontalScrollIndicator={false}
-        style={styles.filterContainer}
-        contentContainerStyle={styles.filterContent}
-      >
-        {['all', 'beginner', 'intermediate', 'advanced'].map((level) => (
-          <TouchableOpacity
-            key={level}
-            style={[
-              styles.filterButton,
-              filter === level && styles.filterButtonActive
-            ]}
-            onPress={() => setFilter(level as 'all' | 'beginner' | 'intermediate' | 'advanced')}
-          >
-            <Text style={[
-              styles.filterText,
-              filter === level && styles.filterTextActive
-            ]}>
-              {level.charAt(0).toUpperCase() + level.slice(1)}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
+    duration: '6 weeks',  }, [isGuest, webCourses, courseProgress]);pacity,
 
-      {/* Course Stats */}
-      <View style={styles.statsRow}>
-        <View style={styles.statBox}>
-          <Text style={styles.statNumber}>{filteredCourses.length}</Text>
-          <Text style={styles.statLabel}>Courses</Text>
-        </View>
-        <View style={styles.statBox}>
-          <Text style={styles.statNumber}>{filteredCourses.reduce((sum, c) => sum + c.lessons, 0)}</Text>
-          <Text style={styles.statLabel}>Lessons</Text>
-        </View>
-        <View style={styles.statBox}>
-          <Text style={styles.statNumber}>{isGuest ? 0 : Math.floor(Math.random() * 5) + 1}</Text>
-          <Text style={styles.statLabel}>Completed</Text>
-        </View>
-      </View>
+    difficulty: 'Beginner',  RefreshControl,
 
-      {/* Courses List */}
-      <View style={styles.coursesContainer}>
-        {filteredCourses.map((course) => (
-          <TouchableOpacity
-            key={course.id}
-            style={styles.courseCard}
-            onPress={() => handleCoursePress(course)}
-            activeOpacity={0.8}
-          >
-            {/* Course Header */}
-            <View style={styles.courseHeader}>
-              <View style={styles.courseHeaderTop}>
-                <View style={[styles.difficultyBadge, { backgroundColor: getDifficultyColor(course.difficulty) }]}>
-                  <Text style={styles.difficultyText}>{course.difficulty}</Text>
-                </View>
-                {course.certificate && (
-                  <Text style={styles.certificateIcon}>🏆</Text>
-                )}
-              </View>
-              <Text style={styles.courseTitle}>{course.title}</Text>
-              <Text style={styles.courseInstructor}>by {course.instructor}</Text>
-            </View>
+    rating: 4.8,  Alert,
 
-            {/* Course Description */}
-            <Text style={styles.courseDescription} numberOfLines={2}>
-              {course.description}
-            </Text>
+    students: 2340,} from 'react-native';
 
-            {/* Course Info */}
-            <View style={styles.courseInfo}>
-              <View style={styles.infoItem}>
-                <Text style={styles.infoIcon}>⏱️</Text>
-                <Text style={styles.infoText}>{course.duration}</Text>
-              </View>
-              <View style={styles.infoItem}>
-                <Text style={styles.infoIcon}>⭐</Text>
-                <Text style={styles.infoText}>{course.rating}</Text>
-              </View>
-              <View style={styles.infoItem}>
-                <Text style={styles.infoIcon}>👥</Text>
-                <Text style={styles.infoText}>{course.students.toLocaleString()}</Text>
-              </View>
-              <View style={styles.infoItem}>
-                <Text style={styles.infoIcon}>📚</Text>
-                <Text style={styles.infoText}>{course.lessons} lessons</Text>
-              </View>
-            </View>
+    certificate: true,import { useNavigation } from '@react-navigation/native';
 
-            {/* Progress Bar (for authenticated users) */}
-            {!isGuest && course.progress !== undefined && (
-              <View style={styles.progressContainer}>
-                <Text style={styles.progressText}>Progress: {course.progress}%</Text>
-                <View style={styles.progressBar}>
-                  <View 
-                    style={[
-                      styles.progressFill, 
-                      { width: `${course.progress}%` }
-                    ]} 
-                  />
-                </View>
-              </View>
-            )}
+    lessons: 24,import { useSessionContext } from '../contexts/SessionContext';
 
-            {/* Tags */}
-            <View style={styles.tagsContainer}>
-              {course.tags.map((tag, index) => (
-                <View key={index} style={styles.tag}>
-                  <Text style={styles.tagText}>{tag}</Text>
-                </View>
-              ))}
-            </View>
-          </TouchableOpacity>
-        ))}
-      </View>
+    tags: ['Sustainability', 'Soil Health'],import { useCoursesCatalog } from '../hooks/useCoursesCatalog';
 
-      {/* Footer Call to Action */}
-      <View style={styles.footer}>
-        <Text style={styles.footerTitle}>Ready to start learning?</Text>
-        <Text style={styles.footerText}>
-          Join thousands of farmers improving their skills with our expert courses
-        </Text>
-        {isGuest ? (
-          <TouchableOpacity 
-            style={styles.ctaButton}
-            onPress={() => navigation.navigate('Auth' as never)}
-          >
-            <Text style={styles.ctaButtonText}>Get Started Free</Text>
-          </TouchableOpacity>
-        ) : (
-          <TouchableOpacity 
-            style={styles.ctaButton}
-            onPress={() => Alert.alert('Premium', 'Premium features coming soon!')}
-          >
-            <Text style={styles.ctaButtonText}>Upgrade to Premium</Text>
-          </TouchableOpacity>
+  },import { useUserProgress } from '../hooks/useUserProgress';
+
+  {
+
+    id: 'precision-agriculture',interface Course {
+
+    title: 'Precision Agriculture with Technology',  id: string;
+
+    description: 'Master modern farming techniques using GPS, sensors, and data analytics.',  title: string;
+
+    instructor: 'Prof. Michael Chen',  description: string;
+
+    duration: '8 weeks',  instructor: string;
+
+    difficulty: 'Advanced',  duration: string;
+
+    rating: 4.9,  difficulty: 'Beginner' | 'Intermediate' | 'Advanced';
+
+    students: 1850,  rating: number;
+
+    certificate: true,  students: number;
+
+    lessons: 32,  certificate: boolean;
+
+    tags: ['Technology', 'Data Analytics'],  lessons: number;
+
+  },  progress?: number;
+
+  {  tags: string[];
+
+    id: 'organic-farming',}
+
+    title: 'Organic Farming Methods',
+
+    description: 'Comprehensive guide to organic farming practices and natural pest control.',const COURSES: Course[] = [
+
+    instructor: 'Maria Rodriguez',  {
+
+    duration: '5 weeks',    id: 'sustainable-farming',
+
+    difficulty: 'Intermediate',    title: 'Sustainable Farming Fundamentals',
+
+    rating: 4.7,    description: 'Learn the basics of sustainable agriculture, soil health, and crop rotation techniques for long-term productivity.',
+
+    students: 1920,    instructor: 'Dr. Sarah Johnson',
+
+    certificate: true,    duration: '6 weeks',
+
+    lessons: 20,    difficulty: 'Beginner',
+
+    tags: ['Organic', 'Certification'],    rating: 4.8,
+
+  },    students: 2340,
+
+];    certificate: true,
+
+    lessons: 24,
+
+const CoursesScreen: React.FC = () => {    tags: ['Sustainability', 'Soil Health'],
+
+  const navigation = useNavigation();  },
+
+  const { session, isGuest } = useSessionContext();  {
+
+  const [courses, setCourses] = useState<Course[]>(COURSES);    id: 'precision-agriculture',
+
+  const [refreshing, setRefreshing] = useState(false);    title: 'Precision Agriculture with Technology',
+
+  const [filter, setFilter] = useState<'all' | 'beginner' | 'intermediate' | 'advanced'>('all');    description: 'Master modern farming techniques using GPS, sensors, and data analytics for optimized crop yields.',
+
+    instructor: 'Prof. Michael Chen',
+
+  useEffect(() => {    duration: '8 weeks',
+
+    // Add progress for authenticated users    difficulty: 'Advanced',
+
+    if (!isGuest) {    rating: 4.9,
+
+      const coursesWithProgress = COURSES.map(course => ({    students: 1850,
+
+        ...course,    certificate: true,
+
+        progress: Math.floor(Math.random() * 100),    lessons: 32,
+
+      }));    tags: ['Technology', 'Data Analytics'],
+
+      setCourses(coursesWithProgress);  },
+
+    } else {  {
+
+      setCourses(COURSES);    id: 'organic-farming',
+
+    }    title: 'Organic Farming Methods',
+
+  }, [isGuest]);    description: 'Comprehensive guide to organic farming practices, natural pest control, and certification processes.',
+
+    instructor: 'Maria Rodriguez',
+
+  const onRefresh = async () => {    duration: '5 weeks',
+
+    setRefreshing(true);    difficulty: 'Intermediate',
+
+    setTimeout(() => setRefreshing(false), 1000);    rating: 4.7,
+
+  };    students: 1920,
+
+    certificate: true,
+
+  const filteredCourses = courses.filter(course => {    lessons: 20,
+
+    if (filter === 'all') return true;    tags: ['Organic', 'Certification'],
+
+    return course.difficulty.toLowerCase() === filter;  },
+
+  });  {
+
+    id: 'climate-smart-agriculture',
+
+  const handleCoursePress = (course: Course) => {    title: 'Climate-Smart Agriculture',
+
+    if (isGuest) {    description: 'Adapt farming practices to climate change, improve resilience, and reduce environmental impact.',
+
+      Alert.alert(    instructor: 'Dr. James Wilson',
+
+        'Sign In Required',    duration: '7 weeks',
+
+        'Please sign in to access courses and track your progress.',    difficulty: 'Intermediate',
+
+        [    rating: 4.8,
+
+          { text: 'Cancel', style: 'cancel' },    students: 2100,
+
+          { text: 'Sign In', onPress: () => navigation.navigate('Auth' as never) },    certificate: true,
+
+        ]    lessons: 28,
+
+      );    tags: ['Climate Change', 'Resilience'],
+
+      return;  },
+
+    }  {
+
+        id: 'water-management',
+
+    Alert.alert('Course Access', `Opening "${course.title}"\n\nProgress: ${course.progress || 0}%`);    title: 'Efficient Water Management',
+
+  };    description: 'Optimize irrigation systems, conserve water resources, and implement smart watering strategies.',
+
+    instructor: 'Dr. Lisa Park',
+
+  return (    duration: '4 weeks',
+
+    <ScrollView     difficulty: 'Beginner',
+
+      style={styles.container}    rating: 4.6,
+
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}    students: 1750,
+
+    >    certificate: true,
+
+      <View style={styles.header}>    lessons: 16,
+
+        <Text style={styles.title}>🎓 Learning Courses</Text>    tags: ['Water Conservation', 'Irrigation'],
+
+        <Text style={styles.subtitle}>Master sustainable farming techniques</Text>  },
+
+        ];
+
+        {isGuest && (
+
+          <TouchableOpacity export default function CoursesScreen() {
+
+            style={styles.signInPrompt}   const navigation = useNavigation();
+
+            onPress={() => navigation.navigate('Auth' as never)}  const { session, isGuest } = useSessionContext();
+
+          >  const [courses, setCourses] = useState<Course[]>(COURSES);
+
+            <Text style={styles.signInPromptText}>🔐 Sign in to track progress</Text>  const [refreshing, setRefreshing] = useState(false);
+
+          </TouchableOpacity>  const [filter, setFilter] = useState<'all' | 'beginner' | 'intermediate' | 'advanced'>('all');
+
         )}
-      </View>
-    </ScrollView>
-  );
-}
 
-const styles = StyleSheet.create({
+      </View>  useEffect(() => {
+
+    // Add progress for authenticated users
+
+      <ScrollView     if (!isGuest) {
+
+        horizontal       const coursesWithProgress = COURSES.map(course => ({
+
+        showsHorizontalScrollIndicator={false}        ...course,
+
+        contentContainerStyle={styles.filterContainer}        progress: Math.floor(Math.random() * 100),
+
+      >      }));
+
+        {(['all', 'beginner', 'intermediate', 'advanced'] as const).map((filterOption) => (      setCourses(coursesWithProgress);
+
+          <TouchableOpacity    } else {
+
+            key={filterOption}      setCourses(COURSES);
+
+            style={[styles.filterTab, filter === filterOption && styles.activeFilterTab]}    }
+
+            onPress={() => setFilter(filterOption)}  }, [isGuest]);
+
+          >
+
+            <Text style={[styles.filterText, filter === filterOption && styles.activeFilterText]}>  const onRefresh = async () => {
+
+              {filterOption.charAt(0).toUpperCase() + filterOption.slice(1)}    setRefreshing(true);
+
+            </Text>    // Simulate API refresh
+
+          </TouchableOpacity>    await new Promise(resolve => setTimeout(resolve, 1000));
+
+        ))}    setRefreshing(false);
+
+      </ScrollView>  };
+
+
+
+      <View style={styles.coursesContainer}>  const filteredCourses = courses.filter(course => {
+
+        {filteredCourses.map((course, index) => (    if (filter === 'all') return true;
+
+          <TouchableOpacity key={course.id} style={styles.courseCard} onPress={() => handleCoursePress(course)}>    return course.difficulty.toLowerCase() === filter;
+
+            <View style={styles.courseHeader}>  });
+
+              <Text style={styles.courseTitle}>{course.title}</Text>
+
+              <View style={[styles.difficultyBadge, { backgroundColor: getDifficultyColor(course.difficulty) }]}>  const getDifficultyColor = (difficulty: string) => {
+
+                <Text style={styles.difficultyText}>{course.difficulty}</Text>    switch (difficulty) {
+
+              </View>      case 'Beginner': return '#10B981';
+
+            </View>      case 'Intermediate': return '#F59E0B';
+
+                  case 'Advanced': return '#EF4444';
+
+            <Text style={styles.courseDescription}>{course.description}</Text>      default: return '#6B7280';
+
+                }
+
+            <View style={styles.courseMetrics}>  };
+
+              <Text style={styles.instructor}>👨‍🏫 {course.instructor}</Text>
+
+              <Text style={styles.duration}>⏱️ {course.duration}</Text>  const handleCoursePress = (course: Course) => {
+
+            </View>    if (isGuest) {
+
+                  Alert.alert(
+
+            <View style={styles.courseStats}>        'Sign In Required',
+
+              <Text style={styles.rating}>⭐ {course.rating}</Text>        'Create a free account to access full course content and track your progress.',
+
+              <Text style={styles.students}>👥 {course.students}</Text>        [
+
+              <Text style={styles.lessons}>📚 {course.lessons} lessons</Text>          { text: 'Maybe Later', style: 'cancel' },
+
+              {course.certificate && <Text style={styles.certificate}>🏆 Certificate</Text>}          { text: 'Sign Up', onPress: () => navigation.navigate('Auth' as never) },
+
+            </View>        ]
+
+                  );
+
+            {course.progress !== undefined && (    } else {
+
+              <View style={styles.progressContainer}>      Alert.alert('Course Access', `Opening "${course.title}"\n\nProgress: ${course.progress || 0}%`);
+
+                <Text style={styles.progressText}>Progress: {course.progress}%</Text>    }
+
+                <View style={styles.progressBar}>  };
+
+                  <View style={[styles.progressFill, { width: `${course.progress}%` }]} />
+
+                </View>  return (
+
+              </View>    <ScrollView 
+
+            )}      style={styles.container}
+
+                  refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+
+            <View style={styles.tagsContainer}>    >
+
+              {course.tags.map((tag, tagIndex) => (      {/* Header */}
+
+                <View key={tagIndex} style={styles.tag}>      <View style={styles.header}>
+
+                  <Text style={styles.tagText}>{tag}</Text>        <Text style={styles.title}>🎓 Learning Courses</Text>
+
+                </View>        <Text style={styles.subtitle}>
+
+              ))}          Master sustainable farming with expert-led courses
+
+            </View>        </Text>
+
+          </TouchableOpacity>      </View>
+
+        ))}
+
+      </View>      {/* Guest Notice */}
+
+    </ScrollView>      {isGuest && (
+
+  );        <TouchableOpacity 
+
+};          style={styles.guestNotice}
+
+          onPress={() => navigation.navigate('Auth' as never)}
+
+const getDifficultyColor = (difficulty: string) => {        >
+
+  switch (difficulty) {          <Text style={styles.guestNoticeIcon}>🌟</Text>
+
+    case 'Beginner': return '#10B981';          <View style={styles.guestNoticeContent}>
+
+    case 'Intermediate': return '#F59E0B';            <Text style={styles.guestNoticeTitle}>Unlock Full Learning Experience</Text>
+
+    case 'Advanced': return '#EF4444';            <Text style={styles.guestNoticeText}>
+
+    default: return '#6B7280';              Sign up to track progress, earn certificates, and access premium content
+
+  }            </Text>
+
+};          </View>
+
+        </TouchableOpacity>
+
+const styles = StyleSheet.create({      )}
+
   container: {
-    flex: 1,
-    backgroundColor: '#f8fafc',
+
+    flex: 1,      {/* Filter Buttons */}
+
+    backgroundColor: '#f8f9fa',      <ScrollView 
+
+  },        horizontal 
+
+  header: {        showsHorizontalScrollIndicator={false}
+
+    padding: 20,        style={styles.filterContainer}
+
+    paddingTop: 60,        contentContainerStyle={styles.filterContent}
+
+    backgroundColor: '#2563EB',      >
+
+  },        {['all', 'beginner', 'intermediate', 'advanced'].map((level) => (
+
+  title: {          <TouchableOpacity
+
+    fontSize: 24,            key={level}
+
+    fontWeight: 'bold',            style={[
+
+    color: 'white',              styles.filterButton,
+
+    marginBottom: 8,              filter === level && styles.filterButtonActive
+
+  },            ]}
+
+  subtitle: {            onPress={() => setFilter(level as 'all' | 'beginner' | 'intermediate' | 'advanced')}
+
+    fontSize: 16,          >
+
+    color: '#dbeafe',            <Text style={[
+
+  },              styles.filterText,
+
+  signInPrompt: {              filter === level && styles.filterTextActive
+
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',            ]}>
+
+    padding: 12,              {level.charAt(0).toUpperCase() + level.slice(1)}
+
+    borderRadius: 8,            </Text>
+
+    marginTop: 16,          </TouchableOpacity>
+
+  },        ))}
+
+  signInPromptText: {      </ScrollView>
+
+    color: 'white',
+
+    fontSize: 14,      {/* Course Stats */}
+
+    fontWeight: '500',      <View style={styles.statsRow}>
+
+    textAlign: 'center',        <View style={styles.statBox}>
+
+  },          <Text style={styles.statNumber}>{filteredCourses.length}</Text>
+
+  filterContainer: {          <Text style={styles.statLabel}>Courses</Text>
+
+    paddingHorizontal: 20,        </View>
+
+    paddingVertical: 15,        <View style={styles.statBox}>
+
+  },          <Text style={styles.statNumber}>{filteredCourses.reduce((sum, c) => sum + c.lessons, 0)}</Text>
+
+  filterTab: {          <Text style={styles.statLabel}>Lessons</Text>
+
+    paddingHorizontal: 16,        </View>
+
+    paddingVertical: 8,        <View style={styles.statBox}>
+
+    marginRight: 10,          <Text style={styles.statNumber}>{isGuest ? 0 : Math.floor(Math.random() * 5) + 1}</Text>
+
+    borderRadius: 20,          <Text style={styles.statLabel}>Completed</Text>
+
+    backgroundColor: '#e5e7eb',        </View>
+
+  },      </View>
+
+  activeFilterTab: {
+
+    backgroundColor: '#2563EB',      {/* Courses List */}
+
+  },      <View style={styles.coursesContainer}>
+
+  filterText: {        {filteredCourses.map((course) => (
+
+    fontSize: 14,          <TouchableOpacity
+
+    fontWeight: '500',            key={course.id}
+
+    color: '#374151',            style={styles.courseCard}
+
+  },            onPress={() => handleCoursePress(course)}
+
+  activeFilterText: {            activeOpacity={0.8}
+
+    color: 'white',          >
+
+  },            {/* Course Header */}
+
+  coursesContainer: {            <View style={styles.courseHeader}>
+
+    padding: 20,              <View style={styles.courseHeaderTop}>
+
+  },                <View style={[styles.difficultyBadge, { backgroundColor: getDifficultyColor(course.difficulty) }]}>
+
+  courseCard: {                  <Text style={styles.difficultyText}>{course.difficulty}</Text>
+
+    backgroundColor: 'white',                </View>
+
+    borderRadius: 12,                {course.certificate && (
+
+    padding: 16,                  <Text style={styles.certificateIcon}>🏆</Text>
+
+    marginBottom: 16,                )}
+
+    shadowColor: '#000',              </View>
+
+    shadowOffset: { width: 0, height: 2 },              <Text style={styles.courseTitle}>{course.title}</Text>
+
+    shadowOpacity: 0.1,              <Text style={styles.courseInstructor}>by {course.instructor}</Text>
+
+    shadowRadius: 4,            </View>
+
+    elevation: 3,
+
+  },            {/* Course Description */}
+
+  courseHeader: {            <Text style={styles.courseDescription} numberOfLines={2}>
+
+    flexDirection: 'row',              {course.description}
+
+    justifyContent: 'space-between',            </Text>
+
+    alignItems: 'flex-start',
+
+    marginBottom: 8,            {/* Course Info */}
+
+  },            <View style={styles.courseInfo}>
+
+  courseTitle: {              <View style={styles.infoItem}>
+
+    fontSize: 18,                <Text style={styles.infoIcon}>⏱️</Text>
+
+    fontWeight: 'bold',                <Text style={styles.infoText}>{course.duration}</Text>
+
+    color: '#111827',              </View>
+
+    flex: 1,              <View style={styles.infoItem}>
+
+    marginRight: 10,                <Text style={styles.infoIcon}>⭐</Text>
+
+  },                <Text style={styles.infoText}>{course.rating}</Text>
+
+  difficultyBadge: {              </View>
+
+    paddingHorizontal: 8,              <View style={styles.infoItem}>
+
+    paddingVertical: 4,                <Text style={styles.infoIcon}>👥</Text>
+
+    borderRadius: 12,                <Text style={styles.infoText}>{course.students.toLocaleString()}</Text>
+
+  },              </View>
+
+  difficultyText: {              <View style={styles.infoItem}>
+
+    color: 'white',                <Text style={styles.infoIcon}>📚</Text>
+
+    fontSize: 12,                <Text style={styles.infoText}>{course.lessons} lessons</Text>
+
+    fontWeight: 'bold',              </View>
+
+  },            </View>
+
+  courseDescription: {
+
+    fontSize: 14,            {/* Progress Bar (for authenticated users) */}
+
+    color: '#6B7280',            {!isGuest && course.progress !== undefined && (
+
+    lineHeight: 20,              <View style={styles.progressContainer}>
+
+    marginBottom: 12,                <Text style={styles.progressText}>Progress: {course.progress}%</Text>
+
+  },                <View style={styles.progressBar}>
+
+  courseMetrics: {                  <View 
+
+    marginBottom: 12,                    style={[
+
+  },                      styles.progressFill, 
+
+  instructor: {                      { width: `${course.progress}%` }
+
+    fontSize: 14,                    ]} 
+
+    color: '#374151',                  />
+
+    marginBottom: 4,                </View>
+
+  },              </View>
+
+  duration: {            )}
+
+    fontSize: 14,
+
+    color: '#374151',            {/* Tags */}
+
+  },            <View style={styles.tagsContainer}>
+
+  courseStats: {              {course.tags.map((tag, index) => (
+
+    flexDirection: 'row',                <View key={index} style={styles.tag}>
+
+    justifyContent: 'space-between',                  <Text style={styles.tagText}>{tag}</Text>
+
+    marginBottom: 12,                </View>
+
+  },              ))}
+
+  rating: {            </View>
+
+    fontSize: 12,          </TouchableOpacity>
+
+    color: '#F59E0B',        ))}
+
+    fontWeight: '500',      </View>
+
   },
-  header: {
-    padding: 20,
-    paddingTop: 60,
-    backgroundColor: '#ffffff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e2e8f0',
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: '#1e293b',
-    marginBottom: 4,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: '#64748b',
-  },
+
+  students: {      {/* Footer Call to Action */}
+
+    fontSize: 12,      <View style={styles.footer}>
+
+    color: '#6B7280',        <Text style={styles.footerTitle}>Ready to start learning?</Text>
+
+  },        <Text style={styles.footerText}>
+
+  lessons: {          Join thousands of farmers improving their skills with our expert courses
+
+    fontSize: 12,        </Text>
+
+    color: '#6B7280',        {isGuest ? (
+
+  },          <TouchableOpacity 
+
+  certificate: {            style={styles.ctaButton}
+
+    fontSize: 12,            onPress={() => navigation.navigate('Auth' as never)}
+
+    color: '#10B981',          >
+
+    fontWeight: 'bold',            <Text style={styles.ctaButtonText}>Get Started Free</Text>
+
+  },          </TouchableOpacity>
+
+  progressContainer: {        ) : (
+
+    marginBottom: 12,          <TouchableOpacity 
+
+  },            style={styles.ctaButton}
+
+  progressText: {            onPress={() => Alert.alert('Premium', 'Premium features coming soon!')}
+
+    fontSize: 12,          >
+
+    color: '#374151',            <Text style={styles.ctaButtonText}>Upgrade to Premium</Text>
+
+    marginBottom: 4,          </TouchableOpacity>
+
+  },        )}
+
+  progressBar: {      </View>
+
+    height: 4,    </ScrollView>
+
+    backgroundColor: '#E5E7EB',  );
+
+    borderRadius: 2,}
+
+    overflow: 'hidden',
+
+  },const styles = StyleSheet.create({
+
+  progressFill: {  container: {
+
+    height: '100%',    flex: 1,
+
+    backgroundColor: '#10B981',    backgroundColor: '#f8fafc',
+
+  },  },
+
+  tagsContainer: {  header: {
+
+    flexDirection: 'row',    padding: 20,
+
+    flexWrap: 'wrap',    paddingTop: 60,
+
+  },    backgroundColor: '#ffffff',
+
+  tag: {    borderBottomWidth: 1,
+
+    backgroundColor: '#F3F4F6',    borderBottomColor: '#e2e8f0',
+
+    paddingHorizontal: 8,  },
+
+    paddingVertical: 4,  title: {
+
+    borderRadius: 8,    fontSize: 28,
+
+    marginRight: 8,    fontWeight: '700',
+
+    marginBottom: 4,    color: '#1e293b',
+
+  },    marginBottom: 4,
+
+  tagText: {  },
+
+    fontSize: 12,  subtitle: {
+
+    color: '#374151',    fontSize: 16,
+
+  },    color: '#64748b',
+
+});  },
+
   guestNotice: {
-    backgroundColor: '#fef3c7',
+
+export default CoursesScreen;    backgroundColor: '#fef3c7',
     margin: 16,
     padding: 16,
     borderRadius: 12,

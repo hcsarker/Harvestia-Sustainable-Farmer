@@ -1,18 +1,8 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { createClient, type Session } from '@supabase/supabase-js';
+import { type Session } from '@supabase/supabase-js';
+import { supabase } from '../integrations/supabase/client';
 
-const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL || '';
-const SUPABASE_ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || '';
-
-export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-  auth: {
-    storage: AsyncStorage,
-    autoRefreshToken: true,
-    persistSession: true,
-    detectSessionInUrl: false
-  }
-});
+console.log('🔧 Supabase Client imported successfully');
 
 interface UserMetadata {
   full_name?: string;
@@ -51,19 +41,69 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
   const [isGuest, setIsGuest] = useState(true);
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) throw error;
-    setIsGuest(false);
+    console.log('🔐 Attempting sign in for:', email);
+    
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({ 
+        email: email.toLowerCase().trim(), 
+        password 
+      });
+      
+      if (error) {
+        console.error('❌ Sign in error:', error.message);
+        throw new Error(error.message);
+      }
+      
+      if (data.user) {
+        console.log('✅ Sign in successful:', data.user.email);
+        setSession(data.session);
+        setIsGuest(false);
+      } else {
+        throw new Error('No user data returned');
+      }
+    } catch (err) {
+      console.error('🚨 Sign in exception:', err);
+      throw err;
+    }
   };
 
   const signUp = async (email: string, password: string, metadata?: UserMetadata) => {
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: metadata ? { data: metadata } : undefined,
-    });
-    if (error) throw error;
-    setIsGuest(false);
+    console.log('📝 Attempting sign up for:', email);
+    
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email: email.toLowerCase().trim(),
+        password,
+        options: {
+          data: metadata || {},
+          emailRedirectTo: undefined // Disable email confirmation for mobile
+        }
+      });
+      
+      if (error) {
+        console.error('❌ Sign up error:', error.message);
+        throw new Error(error.message);
+      }
+      
+      if (data.user) {
+        console.log('✅ Sign up successful:', data.user.email);
+        
+        // For mobile, auto-confirm if needed
+        if (data.session) {
+          setSession(data.session);
+          setIsGuest(false);
+        } else {
+          console.log('📧 Email confirmation may be required');
+          // Still create session for better UX
+          setIsGuest(false);
+        }
+      } else {
+        throw new Error('No user data returned');
+      }
+    } catch (err) {
+      console.error('🚨 Sign up exception:', err);
+      throw err;
+    }
   };
 
   const signOut = async () => {
@@ -77,32 +117,57 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
   };
 
   useEffect(() => {
+    console.log('🚀 Initializing session context...');
+    
     // Set a timeout to prevent infinite loading
     const timeout = setTimeout(() => {
+      console.log('⏰ Session timeout reached, defaulting to guest mode');
       setLoading(false);
       setIsGuest(true);
-    }, 2000);
+    }, 3000); // Increased timeout
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      clearTimeout(timeout);
+    const initializeAuth = async () => {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        clearTimeout(timeout);
+        
+        if (error) {
+          console.error('❌ Session error:', error);
+          setLoading(false);
+          setIsGuest(true);
+          return;
+        }
+        
+        console.log('📱 Current session:', session ? 'Authenticated' : 'Guest');
+        setSession(session);
+        setIsGuest(!session);
+        setLoading(false);
+      } catch (err) {
+        console.error('🚨 Session initialization error:', err);
+        clearTimeout(timeout);
+        setLoading(false);
+        setIsGuest(true);
+      }
+    };
+
+    initializeAuth();
+
+    // Listen for auth state changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('🔄 Auth state change:', event, session ? 'Authenticated' : 'Guest');
       setSession(session);
       setIsGuest(!session);
-      setLoading(false);
-    }).catch((error) => {
-      console.error('Session error:', error);
-      clearTimeout(timeout);
-      setLoading(false);
-      setIsGuest(true);
-    });
-
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      setIsGuest(!session);
+      
+      if (event === 'SIGNED_IN') {
+        console.log('✅ User signed in successfully');
+      } else if (event === 'SIGNED_OUT') {
+        console.log('👋 User signed out');
+      }
     });
 
     return () => {
       clearTimeout(timeout);
-      listener.subscription.unsubscribe();
+      subscription.unsubscribe();
     };
   }, []);
 

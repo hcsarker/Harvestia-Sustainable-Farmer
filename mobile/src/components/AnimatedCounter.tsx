@@ -1,58 +1,46 @@
-import React, { useEffect, useState } from 'react';
-import { Text, StyleSheet } from 'react-native';
-
-import { TextStyle } from 'react-native';
+import { useEffect, useState } from "react"
 
 interface AnimatedCounterProps {
-  value: number;
-  duration?: number;
-  style?: TextStyle;
+  end: number
+  duration?: number
+  prefix?: string
+  suffix?: string
+  className?: string
 }
 
-const AnimatedCounter: React.FC<AnimatedCounterProps> = ({ 
-  value, 
+export function AnimatedCounter({ 
+  end, 
   duration = 2000, 
-  style 
-}) => {
-  const [displayValue, setDisplayValue] = useState(0);
+  prefix = "", 
+  suffix = "",
+  className = ""
+}: AnimatedCounterProps) {
+  const [count, setCount] = useState(0)
 
   useEffect(() => {
-    let startTime: number;
-    let animationId: number;
+    let startTime: number
+    let animationFrame: number
 
-    const animate = (currentTime: number) => {
-      if (!startTime) startTime = currentTime;
-      const progress = Math.min((currentTime - startTime) / duration, 1);
+    const animate = (timestamp: number) => {
+      if (!startTime) startTime = timestamp
+      const progress = Math.min((timestamp - startTime) / duration, 1)
       
-      setDisplayValue(Math.floor(progress * value));
-      
+      // Easing function for smooth animation
+      const easeOutQuart = 1 - Math.pow(1 - progress, 4)
+      setCount(Math.floor(easeOutQuart * end))
+
       if (progress < 1) {
-        animationId = requestAnimationFrame(animate);
+        animationFrame = requestAnimationFrame(animate)
       }
-    };
+    }
 
-    animationId = requestAnimationFrame(animate);
-
-    return () => {
-      if (animationId) {
-        cancelAnimationFrame(animationId);
-      }
-    };
-  }, [value, duration]);
+    animationFrame = requestAnimationFrame(animate)
+    return () => cancelAnimationFrame(animationFrame)
+  }, [end, duration])
 
   return (
-    <Text style={[styles.counter, style]}>
-      {displayValue}
-    </Text>
-  );
-};
-
-const styles = StyleSheet.create({
-  counter: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#1e293b',
-  },
-});
-
-export default AnimatedCounter;
+    <span className={className}>
+      {prefix}{count.toLocaleString()}{suffix}
+    </span>
+  )
+}

@@ -1,0 +1,197 @@
+export type Lesson = { id: string; title: string; minutes: number }
+export type Course = {
+  id: string
+  title: string
+  description: string
+  instructor: string
+  duration: string
+  difficulty: 'Beginner' | 'Intermediate' | 'Advanced'
+  rating: number
+  students: number
+  certificate: boolean
+  lessons: Lesson[]
+  tags?: string[]
+  track?: 'Agriculture' | 'Professional' | 'Project'
+  coverImage?: string
+  certificateTemplate?: 'classic' | 'modern' | 'green'
+}
+
+export const courseCatalog: Course[] = [
+  {
+    id: 'fundamentals',
+    title: 'Sustainable Farming Fundamentals',
+    description: 'Learn the core principles of sustainable agriculture and environmental stewardship.',
+    instructor: 'Dr. Maria Rodriguez',
+    duration: '4 weeks',
+    difficulty: 'Beginner',
+    rating: 4.8,
+    students: 1250,
+    certificate: true,
+    lessons: [
+      { id: 'sf-1', title: 'Soil Basics', minutes: 12 },
+      { id: 'sf-2', title: 'Crop Rotation', minutes: 14 },
+      { id: 'sf-3', title: 'Composting', minutes: 10 },
+      { id: 'sf-4', title: 'Pest Management', minutes: 16 },
+    ],
+  },
+  {
+    id: 'workplace-safety',
+    title: 'Workplace Safety and Field Operations',
+    description: 'Best practices for safe farm operations, equipment handling, and hazard awareness on-site.',
+    instructor: 'Engr. Amina Rahman',
+    duration: '3 weeks',
+    difficulty: 'Beginner',
+    rating: 4.6,
+    students: 980,
+    certificate: true,
+    lessons: [
+      { id: 'ws-1', title: 'PPE and Safety Culture', minutes: 12 },
+      { id: 'ws-2', title: 'Machinery Basics and Lockout-Tagout', minutes: 16 },
+      { id: 'ws-3', title: 'Chemical and Pesticide Handling', minutes: 14 },
+      { id: 'ws-4', title: 'Emergency Response and First Aid', minutes: 12 },
+    ],
+    track: 'Professional',
+    tags: ['Safety', 'Operations'],
+    certificateTemplate: 'classic',
+  },
+  {
+    id: 'project-planning',
+    title: 'Project Planning and Agile Execution',
+    description: 'Plan and deliver farm-tech projects using Agile fundamentals, sprints, and stakeholder alignment.',
+    instructor: 'Priya Nair, PMP',
+    duration: '4 weeks',
+    difficulty: 'Intermediate',
+    rating: 4.8,
+    students: 1120,
+    certificate: true,
+    lessons: [
+      { id: 'pp-1', title: 'Project Charter and Scope', minutes: 14 },
+      { id: 'pp-2', title: 'Work Breakdown Structure (WBS)', minutes: 16 },
+      { id: 'pp-3', title: 'Agile Ceremonies and Backlogs', minutes: 15 },
+      { id: 'pp-4', title: 'Risk, Budget, and Timeline', minutes: 16 },
+      { id: 'pp-5', title: 'Stakeholder Communication', minutes: 12 },
+    ],
+    track: 'Professional',
+    tags: ['Project', 'Agile'],
+    certificateTemplate: 'modern',
+  },
+  {
+    id: 'mission-vision-okrs',
+    title: 'Mission, Vision, and OKRs for Teams',
+    description: 'Craft clear mission and vision statements and translate them into measurable OKRs for execution.',
+    instructor: 'Leah Thompson',
+    duration: '2 weeks',
+    difficulty: 'Beginner',
+    rating: 4.7,
+    students: 760,
+    certificate: true,
+    lessons: [
+      { id: 'mv-1', title: 'Mission vs. Vision vs. Strategy', minutes: 12 },
+      { id: 'mv-2', title: 'Writing Impactful Statements', minutes: 14 },
+      { id: 'mv-3', title: 'Objectives and Key Results (OKRs)', minutes: 16 },
+      { id: 'mv-4', title: 'Quarterly Review and Alignment', minutes: 12 },
+    ],
+    track: 'Professional',
+    tags: ['OKRs', 'Leadership'],
+    certificateTemplate: 'modern',
+  },
+  {
+    id: 'sustainability-strategy',
+    title: 'Sustainability Strategy and ESG',
+    description: 'Design a sustainability roadmap aligned with ESG metrics, compliance, and farm impact goals.',
+    instructor: 'Dr. Kelvin Adeyemi',
+    duration: '4 weeks',
+    difficulty: 'Intermediate',
+    rating: 4.9,
+    students: 540,
+    certificate: true,
+    lessons: [
+      { id: 'esg-1', title: 'ESG Basics and Materiality', minutes: 14 },
+      { id: 'esg-2', title: 'Data Collection and KPIs', minutes: 16 },
+      { id: 'esg-3', title: 'Reporting Standards (GRI, SASB)', minutes: 15 },
+      { id: 'esg-4', title: 'Sustainability Roadmapping', minutes: 16 },
+    ],
+    track: 'Professional',
+    tags: ['ESG', 'Strategy'],
+    certificateTemplate: 'green',
+  },
+  {
+    id: 'product-management',
+    title: 'Product Management for AgriTech',
+    description: 'Build impactful features end-to-end: discovery, prioritization, MVP, and feedback loops.',
+    instructor: 'Nicolas Ortega',
+    duration: '3 weeks',
+    difficulty: 'Intermediate',
+    rating: 4.8,
+    students: 680,
+    certificate: true,
+    lessons: [
+      { id: 'pm-1', title: 'User Research and Personas', minutes: 12 },
+      { id: 'pm-2', title: 'Prioritization and Roadmaps', minutes: 15 },
+      { id: 'pm-3', title: 'MVP and Experiments', minutes: 16 },
+      { id: 'pm-4', title: 'Metrics and Iteration', minutes: 12 },
+    ],
+    track: 'Professional',
+    tags: ['Product', 'MVP'],
+    certificateTemplate: 'modern',
+  },
+  {
+    id: 'data-analytics',
+    title: 'Data Analytics for Decision-Making',
+    description: 'Learn how to turn raw data into actionable insights using practical analytics techniques.',
+    instructor: 'Dr. Helen Zhou',
+    duration: '4 weeks',
+    difficulty: 'Beginner',
+    rating: 4.7,
+    students: 1040,
+    certificate: true,
+    lessons: [
+      { id: 'da-1', title: 'Data Literacy and Framing Questions', minutes: 12 },
+      { id: 'da-2', title: 'Cleaning and Visualizing Data', minutes: 16 },
+      { id: 'da-3', title: 'Descriptive and Diagnostic Analytics', minutes: 14 },
+      { id: 'da-4', title: 'Forecasting and Decisions', minutes: 16 },
+    ],
+    track: 'Professional',
+    tags: ['Data', 'Analytics'],
+    certificateTemplate: 'modern',
+  },
+  {
+    id: 'nasa-data',
+    title: 'NASA Data for Smart Agriculture',
+    description: 'Harness satellite data and remote sensing for precision farming decisions.',
+    instructor: 'Prof. James Chen',
+    duration: '6 weeks',
+    difficulty: 'Intermediate',
+    rating: 4.9,
+    students: 850,
+    certificate: true,
+    lessons: [
+      { id: 'nd-1', title: 'Remote Sensing 101', minutes: 15 },
+      { id: 'nd-2', title: 'MODIS & NDVI', minutes: 18 },
+      { id: 'nd-3', title: 'SMAP Soil Moisture', minutes: 12 },
+      { id: 'nd-4', title: 'GPM Rainfall', minutes: 12 },
+      { id: 'nd-5', title: 'Fusing Datasets', minutes: 20 },
+    ],
+    track: 'Agriculture',
+    certificateTemplate: 'green',
+  },
+  {
+    id: 'climate-resilience',
+    title: 'Climate-Resilient Crop Management',
+    description: 'Adapt your farming practices to changing climate conditions using data-driven approaches.',
+    instructor: 'Dr. Sarah Williams',
+    duration: '5 weeks',
+    difficulty: 'Advanced',
+    rating: 4.7,
+    students: 620,
+    certificate: true,
+    lessons: [
+      { id: 'cr-1', title: 'Heat & Drought', minutes: 16 },
+      { id: 'cr-2', title: 'Variety Selection', minutes: 12 },
+      { id: 'cr-3', title: 'Irrigation Strategies', minutes: 14 },
+      { id: 'cr-4', title: 'Soil Protection', minutes: 10 },
+    ],
+    track: 'Agriculture',
+    certificateTemplate: 'classic',
+  },
+]

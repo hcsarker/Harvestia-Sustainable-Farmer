@@ -1,87 +1,65 @@
-import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { cn } from "@/lib/utils"
 
 interface ProgressRingProps {
-  progress: number;
-  size?: number;
-  strokeWidth?: number;
+  progress: number
+  size?: number
+  strokeWidth?: number
+  className?: string
+  showPercentage?: boolean
+  color?: string
 }
 
-const ProgressRing: React.FC<ProgressRingProps> = ({ 
+export function ProgressRing({ 
   progress, 
-  size = 60, 
-  strokeWidth = 6 
-}) => {
-  const radius = (size - strokeWidth) / 2;
-  const circumference = 2 * Math.PI * radius;
-  const strokeDasharray = circumference;
-  const strokeDashoffset = circumference - (progress / 100) * circumference;
+  size = 120, 
+  strokeWidth = 8, 
+  className,
+  showPercentage = true,
+  color = "hsl(var(--primary))"
+}: ProgressRingProps) {
+  const radius = (size - strokeWidth) / 2
+  const circumference = radius * 2 * Math.PI
+  const strokeDasharray = circumference
+  const strokeDashoffset = circumference - (progress / 100) * circumference
 
   return (
-    <View style={[styles.container, { width: size, height: size }]}>
-      {/* Background circle */}
-      <View 
-        style={[
-          styles.circle,
-          {
-            width: size,
-            height: size,
-            borderRadius: size / 2,
-            borderWidth: strokeWidth,
-            borderColor: '#e2e8f0',
-          }
-        ]} 
-      />
-      
-      {/* Progress circle - simulated with border */}
-      <View 
-        style={[
-          styles.progressCircle,
-          {
-            width: size,
-            height: size,
-            borderRadius: size / 2,
-            borderWidth: strokeWidth,
-            borderColor: '#8B5CF6',
-            // Simulate progress with transform
-            transform: [{ rotate: `${(progress / 100) * 360}deg` }],
-          }
-        ]} 
-      />
-      
-      <View style={styles.textContainer}>
-        <Text style={styles.progressText}>{Math.round(progress)}%</Text>
-      </View>
-    </View>
-  );
-};
-
-const styles = StyleSheet.create({
-  container: {
-    position: 'relative',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  circle: {
-    position: 'absolute',
-  },
-  progressCircle: {
-    position: 'absolute',
-    borderTopColor: '#8B5CF6',
-    borderRightColor: 'transparent',
-    borderBottomColor: 'transparent',
-    borderLeftColor: 'transparent',
-  },
-  textContainer: {
-    position: 'absolute',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  progressText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#1e293b',
-  },
-});
-
-export default ProgressRing;
+    <div className={cn("relative inline-flex items-center justify-center", className)}>
+      <svg
+        width={size}
+        height={size}
+        className="transform -rotate-90"
+      >
+        {/* Background circle */}
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          fill="transparent"
+          stroke="hsl(var(--muted))"
+          strokeWidth={strokeWidth}
+          className="opacity-20"
+        />
+        {/* Progress circle */}
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          fill="transparent"
+          stroke={color}
+          strokeWidth={strokeWidth}
+          strokeDasharray={strokeDasharray}
+          strokeDashoffset={strokeDashoffset}
+          strokeLinecap="round"
+          className="transition-all duration-500 ease-in-out"
+        />
+      </svg>
+      {showPercentage && (
+        <div className="absolute inset-0 flex items-center justify-center">
+          <span className="text-lg font-bold text-foreground">
+            {Math.round(progress)}%
+          </span>
+        </div>
+      )}
+    </div>
+  )
+}
