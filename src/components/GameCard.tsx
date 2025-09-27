@@ -1,6 +1,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { UnityGame } from "@/components/UnityGame"
 import { cn } from "@/lib/utils"
 import { LucideIcon } from "lucide-react"
 import { Clock, Users, Star, Play } from "lucide-react"
@@ -16,6 +17,9 @@ interface GameCardProps {
   rating: number
   icon: LucideIcon
   color: string
+  gameId?: string
+  gameUrl?: string
+  isUnityGame?: boolean
   onClick?: () => void
 }
 
@@ -30,6 +34,9 @@ export function GameCard({
   rating,
   icon: Icon,
   color,
+  gameId = 'crop-rotation',
+  gameUrl,
+  isUnityGame = false,
   onClick
 }: GameCardProps) {
   return (
@@ -73,10 +80,23 @@ export function GameCard({
           </Badge>
         </div>
         
-        <Button className="w-full hover:scale-105 transition-transform" size="sm">
-          <Play className="h-4 w-4 mr-2" />
-          Play Now
-        </Button>
+        {isUnityGame ? (
+          <UnityGame
+            gameId={gameId}
+            title={title}
+            description={description}
+            gameUrl={gameUrl}
+          />
+        ) : (
+          <Button 
+            className="w-full hover:scale-105 transition-transform" 
+            size="sm"
+            onClick={onClick}
+          >
+            <Play className="h-4 w-4 mr-2" />
+            Play Now
+          </Button>
+        )}
       </CardContent>
     </Card>
   )

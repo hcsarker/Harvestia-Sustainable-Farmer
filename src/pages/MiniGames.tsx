@@ -20,6 +20,22 @@ import {
 const miniGames = [
   {
     id: 1,
+    title: "Farm Life Unity",
+    description: "Interactive farming simulation built with Unity WebGL. Plant crops, manage resources!",
+    category: "Unity Game",
+    difficulty: "Easy",
+    duration: "15 min",
+    highScore: 3200,
+    players: 850,
+    rating: 4.8,
+    icon: Target,
+    color: "bg-green-600",
+    isUnityGame: true,
+    gameId: "farming-sim",
+    gameUrl: undefined
+  },
+  {
+    id: 2,
     title: "Crop Rotation Master",
     description: "Plan the perfect crop rotation sequence to maximize yield and soil health.",
     category: "Strategy",
@@ -29,10 +45,29 @@ const miniGames = [
     players: 1250,
     rating: 4.6,
     icon: Target,
-    color: "bg-green-500"
+    color: "bg-green-500",
+    isUnityGame: true,
+    gameId: "crop-rotation",
+    gameUrl: undefined
   },
   {
-    id: 2,
+    id: 3,
+    title: "Plant Growing Game",
+    description: "Interactive plant growing and gardening simulator with Unity graphics.",
+    category: "Unity Game", 
+    difficulty: "Easy",
+    duration: "10 min",
+    highScore: 2800,
+    players: 650,
+    rating: 4.7,
+    icon: Target,
+    color: "bg-emerald-500",
+    isUnityGame: true,
+    gameId: "plant-game",
+    gameUrl: undefined
+  },
+  {
+    id: 4,
     title: "Weather Pattern Quiz",
     description: "Test your knowledge of weather patterns and climate data interpretation.",
     category: "Quiz",
@@ -42,10 +77,13 @@ const miniGames = [
     players: 980,
     rating: 4.4,
     icon: Brain,
-    color: "bg-blue-500"
+    color: "bg-blue-500",
+    isUnityGame: false,
+    gameId: undefined,
+    gameUrl: undefined
   },
   {
-    id: 3,
+    id: 5,
     title: "Irrigation Optimization",
     description: "Use satellite data to create the most efficient irrigation schedule.",
     category: "Simulation",
@@ -55,10 +93,13 @@ const miniGames = [
     players: 750,
     rating: 4.8,
     icon: Zap,
-    color: "bg-purple-500"
+    color: "bg-purple-500",
+    isUnityGame: false,
+    gameId: undefined,
+    gameUrl: undefined
   },
   {
-    id: 4,
+    id: 6,
     title: "Pest Detective",
     description: "Identify crop diseases and pests from visual clues and symptoms.",
     category: "Educational",
@@ -68,10 +109,13 @@ const miniGames = [
     players: 1100,
     rating: 4.5,
     icon: Target,
-    color: "bg-orange-500"
+    color: "bg-orange-500",
+    isUnityGame: false,
+    gameId: undefined,
+    gameUrl: undefined
   },
   {
-    id: 5,
+    id: 7,
     title: "Sustainable Farm Builder",
     description: "Design and build an eco-friendly farm using sustainable practices.",
     category: "Building",
@@ -81,10 +125,13 @@ const miniGames = [
     players: 1500,
     rating: 4.9,
     icon: Brain,
-    color: "bg-emerald-500"
+    color: "bg-emerald-500",
+    isUnityGame: false,
+    gameId: undefined,
+    gameUrl: undefined
   },
   {
-    id: 6,
+    id: 8,
     title: "NASA Data Challenge",
     description: "Analyze real NASA satellite data to make farming predictions.",
     category: "Data Analysis",
@@ -94,7 +141,10 @@ const miniGames = [
     players: 450,
     rating: 4.7,
     icon: Zap,
-    color: "bg-indigo-500"
+    color: "bg-indigo-500",
+    isUnityGame: false,
+    gameId: undefined,
+    gameUrl: undefined
   }
 ]
 
@@ -170,6 +220,9 @@ export default function MiniGames() {
                 rating={game.rating}
                 icon={game.icon}
                 color={game.color}
+                isUnityGame={game.isUnityGame}
+                gameId={game.gameId}
+                gameUrl={game.gameUrl}
               />
             ))}
           </div>
