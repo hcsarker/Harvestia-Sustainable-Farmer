@@ -12,7 +12,7 @@
 - [ ] **StoryScreen.tsx** - Match web Stories.tsx with interactive storytelling
 - [ ] **CertificatesScreen.tsx** - Match web Certificates.tsx with earned certificates display
 
-## 📋 PHASE 3 - Additional Pages
+## 📋 PHASE 3 - Additional Pages dvfsf
 
 - [ ] **AboutScreen.tsx** - Match web About.tsx
 - [ ] **ContactScreen.tsx** - Match web Contact.tsx
