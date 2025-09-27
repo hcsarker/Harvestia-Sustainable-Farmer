@@ -180,6 +180,12 @@ export default function MiniGames() {
         ? `${game.title} - Visit the Quizzes section to test your knowledge!`
         : `${game.title} - Coming Soon! This educational game will be available in the next update.`;
       alert(message);
+    } else if (game.gameId === 'custom-game' && game.gameUrl) {
+      // For itch.io games, open directly in new tab as fallback
+      const confirmOpen = confirm(`${game.title} will open in a new tab. Continue?`);
+      if (confirmOpen) {
+        window.open(game.gameUrl, '_blank', 'noopener,noreferrer');
+      }
     }
   };
 

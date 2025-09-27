@@ -27,6 +27,7 @@ export function UnityGame({
   const [isLoading, setIsLoading] = useState(false)
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [gameStarted, setGameStarted] = useState(false)
+  const [hasLoadError, setHasLoadError] = useState(false)
   const gameRef = useRef<HTMLIFrameElement>(null)
 
   // Default Unity WebGL games or placeholder games
@@ -44,8 +45,9 @@ export function UnityGame({
       title: 'Plant Growing Game'
     },
     'custom-game': {
-      url: 'https://imtiazahmeddipto.itch.io/smartfarming',
-      title: 'Smart Farming Simulator'
+      url: 'https://v6p9d9t4.ssl.hwcdn.net/html/6566498/index.html',
+      title: 'Smart Farming Simulator',
+      fallbackUrl: 'https://imtiazahmeddipto.itch.io/smartfarming'
     }
   }
 
@@ -57,11 +59,25 @@ export function UnityGame({
   const handleStartGame = () => {
     setIsLoading(true)
     setGameStarted(true)
+    setHasLoadError(false)
     
     // Simulate loading time
     setTimeout(() => {
       setIsLoading(false)
     }, 2000)
+  }
+
+  const handleGameError = () => {
+    setIsLoading(false)
+    setHasLoadError(true)
+  }
+
+  const handleOpenExternalGame = () => {
+    const game = currentGame as { url: string; title: string; fallbackUrl?: string }
+    const url = game?.fallbackUrl || currentGame?.url
+    if (url) {
+      window.open(url, '_blank', 'noopener,noreferrer')
+    }
   }
 
   const handleRestart = () => {
@@ -172,8 +188,29 @@ export function UnityGame({
                 <p className="text-lg font-semibold">Loading Game...</p>
                 <p className="text-sm text-gray-300 mt-2">This might take a few moments</p>
               </div>
+            ) : hasLoadError ? (
+              // Error fallback with external link option
+              <div className="flex flex-col items-center justify-center h-full bg-gray-800 text-white">
+                <div className="text-center">
+                  <div className="text-red-400 mb-4">
+                    <svg className="w-16 h-16 mx-auto" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                    </svg>
+                  </div>
+                  <h3 className="text-xl font-bold mb-2">Game Loading Failed</h3>
+                  <p className="text-sm text-gray-300 mb-6 max-w-md">
+                    The game couldn't load in the embedded player. Try opening it in a new tab.
+                  </p>
+                  <button
+                    onClick={handleOpenExternalGame}
+                    className="bg-primary hover:bg-primary/80 text-white px-6 py-3 rounded-lg font-semibold transition-colors"
+                  >
+                    🚀 Open Game in New Tab
+                  </button>
+                </div>
+              </div>
             ) : (
-              // Game Frame
+              // Game Frame  
               <iframe
                 ref={gameRef}
                 src={currentGame.url}
@@ -185,6 +222,7 @@ export function UnityGame({
                 title={`${currentGame.title} - Interactive Game`}
                 aria-label={`Play ${currentGame.title}`}
                 onLoad={() => setIsLoading(false)}
+                onError={handleGameError}
               />
             )}
           </div>
