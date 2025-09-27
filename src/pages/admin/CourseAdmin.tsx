@@ -236,6 +236,43 @@ export default function CourseAdmin() {
     }
   }
 
+    const seedAllCourses = async () => {
+    setLoading(true)
+    const existing = new Set((courses || []).map(c => (c.title || '').toLowerCase()))
+    
+    // Import all courses from the local catalog
+    const { courseCatalog } = await import('@/lib/courses')
+    
+    const toInsert: Omit<CourseRow, 'id'>[] = courseCatalog.map(course => ({
+      title: course.title,
+      description: course.description,
+      instructor: course.instructor,
+      duration: course.duration,
+      difficulty: course.difficulty,
+      rating: course.rating,
+      students_count: course.students,
+      certificate: course.certificate,
+      lessons_count: course.lessons.length,
+      quick_facts: course.tags || [],
+    })).filter(c => !existing.has((c.title || '').toLowerCase()))
+
+    if (toInsert.length) {
+      const { data, error } = await supabase
+        .from('courses')
+        .insert(toInsert)
+        .select('id,title,description,instructor,duration,difficulty,rating,students_count,certificate,lessons_count,quick_facts')
+      if (error) {
+        toast({ variant: 'destructive', title: 'Seed failed', description: error.message })
+      } else if (data) {
+        setCourses(list => [...list, ...(data as CourseRow[])])
+        toast({ title: 'Success', description: `Added ${data.length} courses from local catalog` })
+      }
+    } else {
+      toast({ title: 'Info', description: 'All courses from local catalog already exist in database' })
+    }
+    setLoading(false)
+  }
+
   const seedProjectCourses = async () => {
     setLoading(true)
     const existing = new Set((courses || []).map(c => (c.title || '').toLowerCase()))
@@ -266,7 +303,7 @@ export default function CourseAdmin() {
       },
       {
         title: 'Harvestia Mission, Vision and Roadmap',
-        description: 'Understand Harvestia’s mission, vision and how they translate into roadmap and releases.',
+        description: 'Understand Harvestia mission, vision and how they translate into roadmap and releases.',
         instructor: 'Product Leadership',
         duration: '2 weeks',
         difficulty: 'Beginner',
@@ -291,8 +328,7 @@ export default function CourseAdmin() {
     ].filter(c => !existing.has((c.title || '').toLowerCase()))
 
     if (toInsert.length) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from('courses')
         .insert(toInsert)
         .select('id,title,description,instructor,duration,difficulty,rating,students_count,certificate,lessons_count,quick_facts')
@@ -370,7 +406,8 @@ export default function CourseAdmin() {
           </div>
           <div className="md:col-span-3">
             <Button onClick={createCourse} disabled={loading || !form.title.trim()}>Create Course</Button>
-            <Button variant="secondary" className="ml-2" onClick={seedProjectCourses} disabled={loading}>Seed Project Courses</Button>
+            <Button variant="secondary" className="ml-2" onClick={seedAllCourses} disabled={loading}>Seed All Courses</Button>
+            <Button variant="outline" className="ml-2" onClick={seedProjectCourses} disabled={loading}>Seed Project Courses</Button>
           </div>
         </CardContent>
       </Card>

@@ -12,6 +12,7 @@
     "typegen": "bash scripts/typegen.sh",
     "test": "vitest run",
     "test:ui": "vitest",
+    "check:edge": "node scripts/edge-health.js",
     "ladle": "ladle serve",
     "ladle:build": "ladle build"
   },

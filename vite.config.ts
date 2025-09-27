@@ -15,6 +15,9 @@ export default defineConfig(({ mode }) => ({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
+      // Shim Node built-ins referenced by some deps (e.g., loaders.gl worker-utils)
+      'node:child_process': path.resolve(__dirname, './src/shims/child_process.ts'),
+      child_process: path.resolve(__dirname, './src/shims/child_process.ts'),
     },
   },
   build: {
@@ -28,7 +31,6 @@ export default defineConfig(({ mode }) => ({
           ],
           // visualization libs
           viz: [
-            "deck.gl",
             "@deck.gl/react",
             "@deck.gl/layers",
             "recharts",

@@ -1,73 +1,79 @@
-import { useEffect, useMemo, useState } from 'react'
-import { supabase } from '@/integrations/supabase/client'
+import { useEffect, useState } from 'react'
 import { useAuth } from '@/hooks/useAuth'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Loader2, Trophy } from 'lucide-react'
-
-type Row = {
-  id: string
-  quiz_id: string
-  score: number
-  total_questions: number
-  completed_at: string
-}
-
-type QuizMap = Record<string, { title: string; difficulty?: string | null }>
+import { Loader2, Trophy, Calendar, Target } from 'lucide-react'
+import { useToast } from '@/hooks/use-toast'
+import { useQuizExam, type UserQuizResult } from '@/hooks/useQuizExam'
 
 export default function MyResults() {
   const { user, isGuest, loading: authLoading } = useAuth()
-  const [rows, setRows] = useState<Row[]>([])
-  const [quizzes, setQuizzes] = useState<QuizMap>({})
+  const [results, setResults] = useState<UserQuizResult[]>([])
   const [loading, setLoading] = useState(true)
+  const { toast } = useToast()
+  const { getUserQuizResults } = useQuizExam()
 
   useEffect(() => {
     let active = true
     async function load() {
-      if (!user || isGuest) { setLoading(false); return }
+      if (!active) return
       setLoading(true)
+      
       try {
-        const [r1, r2] = await Promise.all([
-          supabase.from('user_quiz_results').select('id, quiz_id, score, total_questions, completed_at').order('completed_at', { ascending: false }),
-          supabase.from('quizzes').select('id, title, difficulty')
-        ])
+        const userResults = await getUserQuizResults()
         if (active) {
-          setRows((r1.data as Row[]) || [])
-          const map: QuizMap = {}
-          for (const q of (r2.data || [])) { map[q.id] = { title: q.title, difficulty: q.difficulty } }
-          setQuizzes(map)
+          setResults(userResults)
+        }
+      } catch (e) {
+        if (active) {
+          console.error('Error loading quiz results:', e)
+          toast({ title: 'Error', description: 'Failed to load quiz results', variant: 'destructive' })
         }
       } finally {
-        if (active) setLoading(false)
+        if (active) {
+          setLoading(false)
+        }
       }
     }
-    void load()
-    return () => { active = false }
-  }, [user, isGuest])
 
-  const enriched = useMemo(() => rows.map(r => ({
-    ...r,
-    title: quizzes[r.quiz_id]?.title || 'Untitled Quiz',
-    difficulty: quizzes[r.quiz_id]?.difficulty || null,
-    percentage: r.total_questions ? Math.round((r.score / r.total_questions) * 100) : 0
-  })), [rows, quizzes])
+    if (!authLoading && user && !isGuest) {
+      void load()
+    } else {
+      setResults([])
+      setLoading(false)
+    }
+
+    return () => { active = false }
+  }, [user, isGuest, authLoading, getUserQuizResults, toast])
 
   if (authLoading || loading) {
     return (
-      <div className="container py-10 flex items-center gap-2 text-muted-foreground">
-        <Loader2 className="h-5 w-5 animate-spin" /> Loading results…
+      <div className="container py-6">
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="h-6 w-6 animate-spin" />
+          <span className="ml-2">Loading results...</span>
+        </div>
       </div>
     )
   }
 
-  if (!user || isGuest) {
+  if (isGuest) {
     return (
-      <div className="container py-10">
+      <div className="container py-6">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold flex items-center">
+            <Trophy className="h-7 w-7 mr-3 text-primary" />
+            My Quiz Results
+          </h1>
+          <p className="text-muted-foreground mt-2">Track your quiz performance and progress</p>
+        </div>
+        
         <Card>
-          <CardHeader>
-            <CardTitle>My Results</CardTitle>
-            <CardDescription>Please sign in to view your quiz results.</CardDescription>
-          </CardHeader>
+          <CardContent className="py-12 text-center">
+            <Trophy className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+            <p className="text-lg font-medium mb-2">Login Required</p>
+            <p className="text-muted-foreground">Please login to view your quiz results!</p>
+          </CardContent>
         </Card>
       </div>
     )
@@ -75,31 +81,66 @@ export default function MyResults() {
 
   return (
     <div className="container py-6">
-      <div className="mb-6 flex items-center">
-        <Trophy className="h-6 w-6 mr-2 text-primary" />
-        <h1 className="text-2xl font-bold">My Results</h1>
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold flex items-center">
+          <Trophy className="h-7 w-7 mr-3 text-primary" />
+          My Quiz Results
+        </h1>
+        <p className="text-muted-foreground mt-2">Track your quiz performance and progress</p>
       </div>
-      <div className="grid md:grid-cols-2 gap-4">
-        {enriched.length === 0 ? (
-          <Card className="md:col-span-2"><CardHeader><CardTitle>No results yet</CardTitle><CardDescription>Take a quiz to see your results here.</CardDescription></CardHeader></Card>
-        ) : enriched.map((r) => (
-          <Card key={r.id}>
-            <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                <span>{r.title}</span>
-                <Badge variant="secondary">{r.difficulty ?? '—'}</Badge>
-              </CardTitle>
-              <CardDescription>{new Date(r.completed_at).toLocaleString()}</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center gap-4">
-                <div className="text-3xl font-semibold">{r.score}/{r.total_questions}</div>
-                <div className="text-muted-foreground">({r.percentage}%)</div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+      
+      {results.length === 0 ? (
+        <Card>
+          <CardContent className="py-12 text-center">
+            <Trophy className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+            <p className="text-lg font-medium mb-2">No quiz results yet</p>
+            <p className="text-muted-foreground">Take your first quiz to see results here!</p>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid gap-4">
+          {results.map((result) => (
+            <Card key={result.id} className="hover:shadow-md transition-shadow">
+              <CardHeader>
+                <div className="flex justify-between items-start">
+                  <div className="flex-1">
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <Target className="h-4 w-4" />
+                      {result.quiz_title}
+                    </CardTitle>
+                    <CardDescription className="flex items-center gap-2 mt-1">
+                      <Calendar className="h-3 w-3" />
+                      Completed on {new Date(result.completed_at).toLocaleDateString()}
+                    </CardDescription>
+                  </div>
+                  <div className="flex gap-2">
+                    <Badge variant={result.percentage >= 70 ? 'default' : 'destructive'}>
+                      {result.percentage}%
+                    </Badge>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="flex justify-between items-center text-sm">
+                  <div className="flex items-center gap-4">
+                    <span className="font-medium">
+                      Score: {result.score}/{result.total_questions}
+                    </span>
+                    <span className={`font-medium ${
+                      result.percentage >= 70 ? 'text-green-600' : 'text-red-600'
+                    }`}>
+                      {result.percentage >= 70 ? '✅ Passed' : '❌ Failed'}
+                    </span>
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    Pass: 70%+
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
     </div>
   )
 }

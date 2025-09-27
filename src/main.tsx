@@ -4,6 +4,19 @@ import './index.css'
 // Early diagnostics
 console.log('[main] starting bootstrap');
 
+// In dev, aggressively unregister any service workers that might be intercepting
+// module requests and causing dynamic import failures.
+if (import.meta.env.DEV && 'serviceWorker' in navigator) {
+	navigator.serviceWorker.getRegistrations()
+		.then((regs) => {
+			if (regs.length) {
+				console.warn('[main] Unregistering stale service workers in dev:', regs.length);
+			}
+			regs.forEach((reg) => reg.unregister().catch(() => {}));
+		})
+		.catch((e) => console.warn('[main] serviceWorker.getRegistrations() failed', e));
+}
+
 // Global error visibility (in case React never mounts)
 window.addEventListener('error', (e) => {
 	console.error('[global error]', e.error || e.message);

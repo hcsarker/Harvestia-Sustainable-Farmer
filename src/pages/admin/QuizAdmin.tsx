@@ -8,13 +8,16 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { Separator } from '@/components/ui/separator'
+import { useToast } from '@/hooks/use-toast'
 
 type QuizRow = { id: string; title: string; difficulty: string | null; nasa_topic: string | null; questions_count: number | null; attempts_allowed?: number | null }
 
 export default function QuizAdmin() {
   const { user, isGuest } = useAuth()
+  const { toast } = useToast()
   const [quizzes, setQuizzes] = useState<QuizRow[]>([])
   const [loading, setLoading] = useState(false)
+  const [isTestingConnection, setIsTestingConnection] = useState(false)
   const [newQuiz, setNewQuiz] = useState({ title: '', difficulty: 'Easy', nasa_topic: '', attempts_allowed: 5 })
   const [selectedQuiz, setSelectedQuiz] = useState<string>('')
   const [qForm, setQForm] = useState({ question: '', options: '', correct_answer: '', explanation: '' })
@@ -26,6 +29,33 @@ export default function QuizAdmin() {
     const email = user.email?.toLowerCase() || ''
     return allowList.length ? allowList.includes(email) : false
   }, [user, isGuest])
+
+  const testConnection = async () => {
+    setIsTestingConnection(true)
+    try {
+      const { data, error } = await supabase.from('quizzes').select('count').limit(1)
+      if (error) {
+        toast({ 
+          title: 'Database Connection Failed', 
+          description: `Error: ${error.message}. Run setup SQL script in Supabase dashboard.`,
+          variant: 'destructive' 
+        })
+      } else {
+        toast({ 
+          title: '✅ Database Connected!', 
+          description: 'Quiz system is ready. You can create quizzes now.',
+          variant: 'default'
+        })
+      }
+    } catch (e) {
+      toast({ 
+        title: 'Connection Error', 
+        description: 'Please check Supabase configuration.',
+        variant: 'destructive' 
+      })
+    }
+    setIsTestingConnection(false)
+  }
 
   useEffect(() => {
     let active = true
@@ -58,6 +88,7 @@ export default function QuizAdmin() {
     if (!selectedQuiz) return
     const opts = qForm.options.split(',').map(s => s.trim()).filter(Boolean)
     if (!qForm.question.trim() || opts.length < 2 || !qForm.correct_answer.trim()) return
+    setLoading(true)
     const { error } = await supabase.from('quiz_questions').insert({
       quiz_id: selectedQuiz,
       question: qForm.question.trim(),
@@ -65,8 +96,25 @@ export default function QuizAdmin() {
       correct_answer: qForm.correct_answer.trim(),
       explanation: qForm.explanation || null,
     })
+    setLoading(false)
     if (!error) {
       setQForm({ question: '', options: '', correct_answer: '', explanation: '' })
+      toast({ title: '✅ Question Added', description: 'Question has been added to the quiz successfully.' })
+    } else {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' })
+    }
+  }
+
+  const deleteQuiz = async (quizId: string) => {
+    if (!confirm('Are you sure you want to delete this quiz? This will also delete all its questions.')) return
+    setLoading(true)
+    const { error } = await supabase.from('quizzes').delete().eq('id', quizId)
+    setLoading(false)
+    if (!error) {
+      setQuizzes(prev => prev.filter(q => q.id !== quizId))
+      toast({ title: '✅ Quiz Deleted', description: 'Quiz and all its questions have been deleted.' })
+    } else {
+      toast({ title: 'Delete Error', description: error.message, variant: 'destructive' })
     }
   }
 
@@ -88,6 +136,23 @@ export default function QuizAdmin() {
 
   return (
     <div className="container py-6 space-y-6">
+      
+      {/* Setup Instructions */}
+      <Card className="border-blue-200 bg-blue-50">
+        <CardHeader>
+          <CardTitle className="text-blue-800">🚀 Quiz System Setup</CardTitle>
+          <CardDescription className="text-blue-600">
+            First time setup required! Please follow these steps:
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="text-sm text-blue-700 space-y-2">
+          <div className="font-medium">Step 1: Run SQL Setup</div>
+          <p>Copy content from <code>/supabase/sql/complete_setup.sql</code> and run it in your Supabase dashboard → SQL Editor</p>
+          <div className="font-medium">Step 2: Test Connection</div>
+          <p>Click "🔍 Test Database" button below to verify everything is working</p>
+        </CardContent>
+      </Card>
+
       <Card>
         <CardHeader>
           <CardTitle>Create Quiz</CardTitle>
@@ -119,7 +184,10 @@ export default function QuizAdmin() {
             <Label htmlFor="topic">NASA Topic (optional)</Label>
             <Input id="topic" value={newQuiz.nasa_topic} onChange={(e) => setNewQuiz(v => ({ ...v, nasa_topic: e.target.value }))} placeholder="Soil Moisture" />
           </div>
-          <div className="md:col-span-3">
+          <div className="md:col-span-3 flex gap-2">
+            <Button onClick={testConnection} disabled={isTestingConnection} variant="outline">
+              {isTestingConnection ? "Testing..." : "🔍 Test Database"}
+            </Button>
             <Button onClick={createQuiz} disabled={loading || !newQuiz.title.trim()}>Create Quiz</Button>
           </div>
         </CardContent>
@@ -176,6 +244,24 @@ export default function QuizAdmin() {
                 <div>
                   <div className="font-medium">{q.title}</div>
                   <div className="text-xs text-muted-foreground">{q.difficulty ?? '—'} • {q.nasa_topic ?? '—'} • {q.questions_count ?? 0} questions • Attempts: {q.attempts_allowed ?? 5}</div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button 
+                    size="sm" 
+                    variant="outline" 
+                    onClick={() => setSelectedQuiz(q.id)}
+                    disabled={loading}
+                  >
+                    {selectedQuiz === q.id ? '✓ Selected' : 'Select'}
+                  </Button>
+                  <Button 
+                    size="sm" 
+                    variant="destructive" 
+                    onClick={() => deleteQuiz(q.id)}
+                    disabled={loading}
+                  >
+                    🗑️ Delete
+                  </Button>
                 </div>
               </div>
             ))}

@@ -7,7 +7,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
-import { useSecureQuiz, type Quiz, type QuizQuestion, type QuizResult, fetchMyQuizResult, type UserQuizResultRow } from '@/hooks/useSecureQuiz'
+import { useQuizExam, type QuizExamData, type QuizSubmissionResult, type QuizQuestion } from '@/hooks/useQuizExam'
 import { useAuth } from '@/hooks/useAuth'
 import { Loader2, ChevronLeft, ChevronRight, Timer, Trophy, CheckCircle2, XCircle } from 'lucide-react'
 
@@ -16,13 +16,13 @@ type Answers = Record<string, string>
 export default function QuizExam() {
   const { quizId } = useParams()
   const navigate = useNavigate()
-  const { loading, getQuiz, submitQuiz } = useSecureQuiz()
+  const { loading, getQuizWithQuestions, submitQuizAnswers } = useQuizExam()
   const { isAuthenticated, isGuest, loading: authLoading } = useAuth()
-  const [quiz, setQuiz] = useState<Quiz | null>(null)
+  const [quiz, setQuiz] = useState<QuizExamData | null>(null)
   const [current, setCurrent] = useState(0)
   const [answers, setAnswers] = useState<Answers>({})
   const [submitting, setSubmitting] = useState(false)
-  const [result, setResult] = useState<QuizResult | null>(null)
+  const [result, setResult] = useState<QuizSubmissionResult | null>(null)
   const [secondsLeft, setSecondsLeft] = useState<number | null>(null)
   const [startAt, setStartAt] = useState<number | null>(null)
   const [staleLoad, setStaleLoad] = useState(false)
@@ -42,12 +42,7 @@ export default function QuizExam() {
     }
   }, [quiz, totalSeconds, startAt])
 
-  // Require authentication to take/view quiz
-  useEffect(() => {
-    if (!authLoading && (!isAuthenticated || isGuest)) {
-      navigate('/auth')
-    }
-  }, [authLoading, isAuthenticated, isGuest, navigate])
+  // Allow guest access: no redirect to /auth here; guest submissions will be graded locally via edge function
 
   // If we're loading too long, show a friendly error instead of infinite spinner
   useEffect(() => {
@@ -62,32 +57,19 @@ export default function QuizExam() {
   const handleSubmit = useCallback(async () => {
     if (!quizId) return
     setSubmitting(true)
-    // Client-side guard to prevent submit when no attempts left
+    
+    // Check if user has attempts left
     if (quiz && typeof quiz.attempts_left === 'number' && quiz.attempts_left <= 0) {
-      const saved: UserQuizResultRow | null = await fetchMyQuizResult(quizId)
-      if (saved) {
-        setResult({
-          score: saved.score,
-          total_questions: saved.total_questions,
-          percentage: Math.round((saved.score / saved.total_questions) * 100),
-        })
-      }
       setSubmitting(false)
       return
     }
 
-    const res = await submitQuiz(quizId, answers)
-    if (!res && quiz?.attempted && quiz.last_result) {
-      setResult({
-        score: quiz.last_result.score,
-        total_questions: quiz.last_result.total_questions,
-        percentage: Math.round((quiz.last_result.score / quiz.last_result.total_questions) * 100),
-      })
-    } else {
+    const res = await submitQuizAnswers(quizId, answers)
+    if (res) {
       setResult(res)
     }
     setSubmitting(false)
-  }, [answers, quizId, submitQuiz, quiz])
+  }, [answers, quizId, submitQuizAnswers, quiz])
 
   // Robust countdown based on startAt and totalSeconds
   useEffect(() => {
@@ -109,31 +91,14 @@ export default function QuizExam() {
     let active = true
     async function run() {
       if (!quizId) return
-      const q = await getQuiz(quizId)
+      const q = await getQuizWithQuestions(quizId)
       if (active) {
         setQuiz(q)
-        if (q?.attempted && q.last_result) {
-          setResult({
-            score: q.last_result.score,
-            total_questions: q.last_result.total_questions,
-            percentage: Math.round((q.last_result.score / q.last_result.total_questions) * 100),
-          })
-          // Try to fetch saved answers so Review section can display user selections
-          // This is optional and depends on RLS allowing the user to read their own row
-          try {
-            const saved: UserQuizResultRow | null = await fetchMyQuizResult(quizId)
-            if (saved?.answers) {
-              setAnswers(saved.answers)
-            }
-          } catch (_) {
-            // ignore if not available in this context
-          }
-        }
       }
     }
     void run()
     return () => { active = false }
-  }, [quizId, getQuiz])
+  }, [quizId, getQuizWithQuestions])
 
   const total = quiz?.quiz_questions?.length ?? 0
   const progress = useMemo(() => {
@@ -153,8 +118,7 @@ export default function QuizExam() {
 
   // submit handled by memoized handleSubmit above
 
-  // Avoid rendering spinner if we just redirected to /auth
-  if ((!isAuthenticated || isGuest) && !authLoading) return null
+  // No early return for guests; let them access and submit
 
   if ((loading || authLoading) && !quiz && !staleLoad) {
     return (
@@ -264,8 +228,47 @@ export default function QuizExam() {
     )
   }
 
+  // If there are no questions, show a friendly message instead of a blank quiz UI
+  if (total === 0) {
+    return (
+      <div className="container py-6">
+        <div className="mb-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold">{quiz.title}</h1>
+              <p className="text-muted-foreground">{quiz.questions_count || 0} questions • Difficulty: <Badge variant="secondary" className="ml-1">{quiz.difficulty}</Badge></p>
+            </div>
+            <div className="flex items-center gap-3 text-sm">
+              <Timer className="h-4 w-4" />
+              <span>{secondsLeft !== null ? formatTime(secondsLeft) : '—:—'}</span>
+            </div>
+          </div>
+          <div className="mt-4">
+            <Progress value={0} />
+            <div className="text-xs text-muted-foreground mt-1">No questions available • Attempts left: {typeof quiz.attempts_left === 'number' ? quiz.attempts_left : '—'}</div>
+          </div>
+        </div>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Quiz not ready</CardTitle>
+            <CardDescription>This quiz currently has no questions. Please check back later.</CardDescription>
+          </CardHeader>
+          <CardContent className="flex items-center gap-2">
+            <Button variant="outline" onClick={() => navigate('/quizzes')}>Back to Quizzes</Button>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
   return (
     <div className="container py-6">
+      {(!isAuthenticated || isGuest) && !authLoading ? (
+        <div className="mb-4 p-3 rounded-md border bg-muted/40 text-sm">
+          You are taking this quiz in guest mode. Your score will be shown but not saved to your account.
+        </div>
+      ) : null}
       <div className="mb-6">
         <div className="flex items-center justify-between">
           <div>
@@ -285,7 +288,7 @@ export default function QuizExam() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Question {current + 1} of {total}</CardTitle>
+          <CardTitle>Question {Math.min(current + 1, total)} of {total}</CardTitle>
           <CardDescription>
             {currentQuestion?.question}
           </CardDescription>

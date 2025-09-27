@@ -28,7 +28,7 @@ If you want a concise executive + technical snapshot, see `PROJECT_SUMMARY.md`.
 | Mini-Games             | Strategy / quiz / optimization                       | Reinforce learning with engagement loops                           |
 | Profile & Achievements | Badges, XP, activity feed                            | Motivation and retention mechanics                                 |
 | Auth & Session         | Supabase auth (persisted)                            | Email/anon sessions, ready for future providers                    |
-| Edge Functions         | `nasa-data`, `quiz-handler`                          | Secure backend logic + API proxying                                |
+| Edge Functions         | `nasa-data`                                          | Secure backend logic + API proxying                                |
 
 ---
 
@@ -71,6 +71,13 @@ Create a `.env` (web) and `.env.local` or `.env` (mobile) with:
 # Web (Vite) – prefix required
 VITE_SUPABASE_URL=...
 VITE_SUPABASE_ANON_KEY=...
+
+# Optional alias used by code if present
+VITE_SUPABASE_PUBLISHABLE_KEY=...
+
+# Comma-separated admin emails to allow the Admin UI route
+# Note: Edge function requires ADMIN_EMAILS as a server secret too
+VITE_ADMIN_EMAILS=...
 
 # Mobile (Expo) – PUBLIC prefix for exposure
 EXPO_PUBLIC_SUPABASE_URL=...
@@ -120,6 +127,35 @@ Recommended future scripts:
 npm run typegen   # (planned) regenerate Supabase types
 npm run test      # (planned) run unit tests
 ```
+
+---
+
+## Admin Setup (Quiz CRUD)
+
+The Admin UI at `/admin/quiz` is gated by `VITE_ADMIN_EMAILS` on the client and uses direct database operations for quiz management.
+
+1. In your `.env`:
+
+```
+VITE_ADMIN_EMAILS="admin1@example.com,admin2@example.com"
+```
+
+2. Set function secrets (via Supabase UI or CLI):
+
+```
+SUPABASE_URL
+SUPABASE_ANON_KEY
+SUPABASE_SERVICE_ROLE_KEY
+ADMIN_EMAILS="admin1@example.com,admin2@example.com"
+```
+
+3. Deploy or redeploy the function:
+
+```
+supabase functions deploy admin-quiz --project-ref <your-project-ref>
+```
+
+Client requests include both `Authorization` and `apikey` headers to ensure smooth auth propagation to the function.
 
 ---
 

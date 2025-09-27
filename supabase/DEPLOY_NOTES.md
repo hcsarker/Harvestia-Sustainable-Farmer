@@ -29,22 +29,56 @@ Open `supabase/migrations/20250916121500_rls_and_policies.sql` and copy the stat
 
 If you prefer, you can paste and run the policies table-by-table.
 
-## 4) Edge Function env vars
+## 4) Install CLI (optional) and link project
 
-Set environment variables for the `nasa-data` Edge Function:
+If you want to deploy from your local environment instead of the Dashboard UI, install the Supabase CLI and link your project.
+
+Install (one option):
+
+```bash
+npm i -g supabase
+```
+
+Authenticate and link:
+
+```bash
+supabase login
+supabase link --project-ref <your-project-ref>
+```
+
+## 5) Edge Function env vars
+
+Set environment variables for your Edge Functions (`nasa-data`, `quiz-handler`, and `admin-quiz`):
 
 - SUPABASE_URL
 - SUPABASE_ANON_KEY
-- SUPABASE_SERVICE_ROLE_KEY ← required for privileged writes (cache + rate limits)
+- SUPABASE_SERVICE_ROLE_KEY ← required for privileged writes (cache, rate limits, admin CRUD)
+- ADMIN_EMAILS ← required by admin-quiz (comma-separated emails allowed to perform admin actions)
 
-Deploy/redeploy the function after setting envs.
+Deploy/redeploy the functions after setting envs.
 
 ### Set envs (CLI)
 
 You can set these via the Supabase UI or CLI. Example with CLI (adjust project ref):
 
 ```bash
-supabase functions secrets set SUPABASE_URL=your-url SUPABASE_ANON_KEY=your-anon SUPABASE_SERVICE_ROLE_KEY=your-service --project-ref your-project-ref
+# Minimal for public-only flows
+supabase functions secrets set \
+  SUPABASE_URL=your-url \
+  SUPABASE_ANON_KEY=your-anon \
+  --project-ref your-project-ref
+
+# With privileged operations
+supabase functions secrets set \
+  SUPABASE_URL=your-url \
+  SUPABASE_ANON_KEY=your-anon \
+  SUPABASE_SERVICE_ROLE_KEY=your-service \
+  --project-ref your-project-ref
+
+# Admin allow list for admin-quiz
+supabase functions secrets set \
+  ADMIN_EMAILS="admin1@example.com,admin2@example.com" \
+  --project-ref your-project-ref
 ```
 
 ### Redeploy the edge function
@@ -53,14 +87,22 @@ From repo root:
 
 ```bash
 supabase functions deploy nasa-data --project-ref your-project-ref
+supabase functions deploy quiz-handler --project-ref your-project-ref
+supabase functions deploy admin-quiz --project-ref your-project-ref
 ```
 
-## 5) Quick verification
+## 6) Quick verification
 
-- Health check endpoint:
+- Health check endpoints:
 
 ```bash
 curl -s https://<your-ref>.supabase.co/functions/v1/nasa-data | jq
+curl -s -H "Content-Type: application/json" -d '{"action":"ping"}' https://<your-ref>.supabase.co/functions/v1/quiz-handler | jq
+curl -s -H "Authorization: Bearer <anon-or-service>" -H "apikey: <anon-or-service>" -H "Content-Type: application/json" -d '{"action":"ping"}' https://<your-ref>.supabase.co/functions/v1/admin-quiz | jq
+
+For admin-quiz, also set:
+
+- ADMIN_EMAILS: comma-separated admin emails that are allowed to perform quiz CRUD via the function
 ```
 
 Should return something like:
@@ -87,13 +129,13 @@ curl -s \
 - First call should fetch from NASA POWER and cache a row in `nasa_data_cache` with a 6‑hour expiry
 - Subsequent calls should hit the cache until `expires_at`
 
-## 6) Notes
+## 7) Notes
 
 - Service role bypasses RLS. We use it server-side only (edge function) for operational tables like `nasa_data_cache` and `rate_limits`.
 - Clients should not write to those tables directly; they read data via the edge function.
 - Keep `RLS` enabled on user tables to protect user data.
 
-## 7) Troubleshooting
+## 8) Troubleshooting
 
 - If you see 500 from the function, hit the health endpoint to confirm envs are present.
 - If POWER calls rate-limit, ensure `rate_limits` policies are applied and the function is authorized with the service role.

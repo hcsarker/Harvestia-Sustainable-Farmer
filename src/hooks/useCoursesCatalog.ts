@@ -103,7 +103,33 @@ export function useCoursesCatalog(): UseCoursesCatalogResult {
     fetchCourses()
   }, [fetchCourses])
 
-  const courses = useMemo(() => dbCourses ?? courseCatalog, [dbCourses])
+  // Use database courses if available, fallback to local catalog
+  const courses = useMemo(() => {
+    // Use database courses if we successfully loaded them
+    if (dbCourses && dbCourses.length > 0) {
+      return dbCourses
+    }
+    // Fallback to local catalog if no database courses or database unavailable
+    return courseCatalog
+  }, [dbCourses])
 
-  return { courses, quickFacts: facts, loading, error }
+  // Merge local quick facts with database quick facts
+  const quickFacts = useMemo(() => {
+    const localFacts: Record<string, string[]> = {
+      'fundamentals': ['Soil health basics', 'Crop rotation benefits', 'Natural pest control'],
+      'nasa-data': ['Remote sensing', 'Satellite data', 'Precision agriculture'],
+      'climate-resilience': ['Climate adaptation', 'Drought resistance', 'Variety selection'],
+      'workplace-safety': ['PPE requirements', 'Equipment safety protocols', 'Emergency procedures'],
+      'project-planning': ['Agile methodology', 'Project planning', 'Risk management'],
+      'mission-vision-okrs': ['Mission vs Vision', 'OKR framework', 'Strategic alignment'],
+      'sustainability-strategy': ['ESG framework', 'Sustainability metrics', 'Impact measurement'],
+      'product-management': ['User research', 'Product strategy', 'MVP development'],
+      'data-analytics': ['Data analysis', 'Data visualization', 'Decision making'],
+    }
+    
+    // Merge database facts with local facts, prioritizing database facts if available
+    return { ...localFacts, ...facts }
+  }, [facts])
+
+  return { courses, quickFacts, loading, error }
 }
