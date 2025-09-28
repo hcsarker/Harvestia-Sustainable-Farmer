@@ -11,6 +11,72 @@
   ],
   "headers": [
     {
+      "source": "/games/.*\\.js\\.br",
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "application/javascript"
+        },
+        {
+          "key": "Content-Encoding",
+          "value": "br"
+        }
+      ]
+    },
+    {
+      "source": "/games/.*\\.wasm\\.br",
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "application/wasm"
+        },
+        {
+          "key": "Content-Encoding",
+          "value": "br"
+        }
+      ]
+    },
+    {
+      "source": "/games/.*\\.data\\.br",
+      "headers": [
+        {
+          "key": "Content-Type", 
+          "value": "application/octet-stream"
+        },
+        {
+          "key": "Content-Encoding",
+          "value": "br"
+        }
+      ]
+    },
+    {
+      "source": "/games/.*\\.js$",
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "application/javascript"
+        }
+      ]
+    },
+    {
+      "source": "/games/.*\\.wasm$",
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "application/wasm"
+        }
+      ]
+    },
+    {
+      "source": "/games/.*\\.data$",
+      "headers": [
+        {
+          "key": "Content-Type", 
+          "value": "application/octet-stream"
+        }
+      ]
+    },
+    {
       "source": "/games/(.*)",
       "headers": [
         {
@@ -28,85 +94,6 @@
         {
           "key": "Cross-Origin-Opener-Policy",
           "value": "unsafe-none"
-        }
-      ]
-    },
-    {
-      "source": "/games/(.*)\\.wasm\\.br$",
-      "headers": [
-        {
-          "key": "Content-Type",
-          "value": "application/wasm"
-        },
-        {
-          "key": "Content-Encoding",
-          "value": "br"
-        }
-      ]
-    },
-    {
-      "source": "/games/(.*)\\.data\\.br$",
-      "headers": [
-        {
-          "key": "Content-Type", 
-          "value": "application/octet-stream"
-        },
-        {
-          "key": "Content-Encoding",
-          "value": "br"
-        }
-      ]
-    },
-    {
-      "source": "/games/(.*)\\.js\\.br$",
-      "headers": [
-        {
-          "key": "Content-Type",
-          "value": "application/javascript"
-        },
-        {
-          "key": "Content-Encoding",
-          "value": "br"
-        }
-      ]
-    },
-    {
-      "source": "/games/(.*)\\.framework\\.js\\.br$",
-      "headers": [
-        {
-          "key": "Content-Type",
-          "value": "application/javascript"
-        },
-        {
-          "key": "Content-Encoding",
-          "value": "br"
-        }
-      ]
-    },
-    {
-      "source": "/games/(.*)\\.wasm$",
-      "headers": [
-        {
-          "key": "Content-Type",
-          "value": "application/wasm"
-        }
-      ]
-    },
-    {
-      "source": "/games/(.*)\\.data$",
-      "headers": [
-        {
-          "key": "Content-Type", 
-          "value": "application/octet-stream"
-        }
-      ]
-    },
-    {
-      "source": "/games/(.*)\\.js$",
-      "headers": [
-        {
-          "key": "Content-Type",
-          "value": "application/javascript"
         }
       ]
     },
