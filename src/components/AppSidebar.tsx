@@ -21,6 +21,7 @@ import {
   Activity
 } from "lucide-react"
 import { NavLink, useLocation } from "react-router-dom"
+
 import {
   Sidebar,
   SidebarContent,
@@ -37,9 +38,10 @@ import { Button } from "@/components/ui/button"
 import { useAuth } from "@/hooks/useAuth"
 import { useMemo } from "react"
 
-const mainItems = [
+// Define navigation items
+const getMainItems = () => [
   { title: "Dashboard", url: "/", icon: Home },
-  { title: "Farm Story", url: "/story", icon: Map },
+  { title: "Story Journey", url: "/story", icon: Map },
   { title: "Simulation", url: "/simulation", icon: FlaskConical },
   { title: "Courses", url: "/courses", icon: BookOpen },
   { title: "Mini Games", url: "/mini-games", icon: Gamepad2 },
@@ -47,8 +49,8 @@ const mainItems = [
   { title: "Profile", url: "/profile", icon: User },
 ]
 
-const quickItems = [
-  { title: "Daily Facts", url: "/facts", icon: Lightbulb },
+const getQuickItems = () => [
+  { title: "Facts", url: "/facts", icon: Lightbulb },
   { title: "Certificates", url: "/certificates", icon: Award },
   { title: "My Results", url: "/results", icon: BarChart2 },
 ]
@@ -66,6 +68,10 @@ export function AppSidebar() {
   const { user, isGuest } = useAuth()
   const currentPath = location.pathname
   const isCollapsed = state === "collapsed"
+  
+  // Get navigation items
+  const mainItems = getMainItems()
+  const quickItems = getQuickItems()
 
   // Check if user is admin
   const isAdmin = useMemo(() => {

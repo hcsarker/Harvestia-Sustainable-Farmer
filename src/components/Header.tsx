@@ -15,6 +15,7 @@ export const Header = ({ onMenuClick }: HeaderProps) => {
   const navigate = useNavigate();
   const [refreshKey, setRefreshKey] = useState(0);
 
+
   // Listen for profile updates
   useEffect(() => {
     const handleProfileUpdate = () => {
@@ -59,7 +60,7 @@ export const Header = ({ onMenuClick }: HeaderProps) => {
         </Button>
         <div className="flex items-center space-x-2">
           <span className="text-2xl">🌾</span>
-          <h1 className="text-xl font-bold text-primary">HARVESTIA</h1>
+          <h1 className="text-xl font-bold text-primary">Harvestia</h1>
         </div>
       </div>
       
