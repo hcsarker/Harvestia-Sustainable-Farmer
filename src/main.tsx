@@ -2,7 +2,7 @@ import { createRoot } from 'react-dom/client'
 import './index.css'
 
 // Early diagnostics
-console.log('[main] starting bootstrap');
+// Starting bootstrap
 
 // Global color consistency enforcer - runs before React mounts
 (() => {
@@ -57,7 +57,7 @@ if (!rootEl) {
 		try {
 			const { default: App } = await import('./App.tsx');
 			createRoot(rootEl).render(<App />);
-			console.log('[main] React root mounted');
+			// React root mounted
 		} catch (e) {
 			console.error('[main] App import/render failed', e);
 			const container = document.createElement('div');

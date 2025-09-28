@@ -98,7 +98,16 @@
       ]
     },
     {
-      "source": "/(.*)",
+      "source": "/games/(.*)",
+      "headers": [
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        }
+      ]
+    },
+    {
+      "source": "/((?!games).*)",
       "headers": [
         {
           "key": "X-Content-Type-Options",

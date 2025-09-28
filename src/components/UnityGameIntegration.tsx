@@ -177,14 +177,14 @@ export function UnityGameIntegration({
                 {gameStarted && (
                   <div className="w-full h-full min-h-96 bg-black flex items-center justify-center relative">
                     <iframe
-                      src={gameUrl}
+                      src={gameUrl.startsWith('http') ? gameUrl : `${window.location.origin}${gameUrl}`}
                       className="w-full h-full border-0"
                       title={title}
                       allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                       allowFullScreen
-                      sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-modals"
+                      sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-modals allow-downloads allow-pointer-lock allow-top-navigation-by-user-activation"
                       onError={() => setHasError(true)}
-                      onLoad={() => console.log('Game loaded successfully')}
+                      onLoad={() => setIsLoading(false)}
                     />
                     
                     {/* Game Controls Overlay */}
