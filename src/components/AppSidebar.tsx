@@ -15,7 +15,10 @@ import {
   LayoutDashboard,
   Sparkles,
   BarChart2,
-  X
+  X,
+  Settings,
+  Shield,
+  Activity
 } from "lucide-react"
 import { NavLink, useLocation } from "react-router-dom"
 import {
@@ -31,6 +34,8 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar"
 import { Button } from "@/components/ui/button"
+import { useAuth } from "@/hooks/useAuth"
+import { useMemo } from "react"
 
 const mainItems = [
   { title: "Dashboard", url: "/", icon: Home },
@@ -48,12 +53,28 @@ const quickItems = [
   { title: "My Results", url: "/results", icon: BarChart2 },
 ]
 
+const adminItems = [
+  { title: "Quiz Admin", url: "/admin/quizzes", icon: Brain },
+  { title: "Course Admin", url: "/admin/courses", icon: Settings },
+  { title: "System Health", url: "/admin/health", icon: Activity },
+]
+
 export function AppSidebar() {
   const { state, toggleSidebar } = useSidebar()
   const location = useLocation()
   const [audioEnabled, setAudioEnabled] = useState(true)
+  const { user, isGuest } = useAuth()
   const currentPath = location.pathname
   const isCollapsed = state === "collapsed"
+
+  // Check if user is admin
+  const isAdmin = useMemo(() => {
+    if (!user || isGuest) return false
+    const allowRaw = (import.meta as unknown as { env: Record<string, string | undefined> }).env?.VITE_ADMIN_EMAILS
+    const allowList = (allowRaw || '').split(',').map((s) => s.trim().toLowerCase()).filter(Boolean)
+    const email = user.email?.toLowerCase() || ''
+    return allowList.length ? allowList.includes(email) : false
+  }, [user, isGuest])
 
   const isActive = (path: string) => currentPath === path
   const getNavCls = ({ isActive }: { isActive: boolean }) =>
@@ -118,6 +139,33 @@ export function AppSidebar() {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+
+        {/* Admin Section - Only visible to admin users */}
+        {isAdmin && (
+          <SidebarGroup>
+            <SidebarGroupLabel className="text-xs uppercase text-sidebar-foreground/70">
+              <Shield className="h-4 w-4 mr-2" />
+              {!isCollapsed && "Admin Panel"}
+            </SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {adminItems.map((item) => (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton 
+                      asChild 
+                      className={getNavCls({ isActive: isActive(item.url) })}
+                    >
+                      <NavLink to={item.url}>
+                        <item.icon className="h-4 w-4" />
+                        {!isCollapsed && <span>{item.title}</span>}
+                      </NavLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
 
         {!isCollapsed && (
           <div className="mt-auto p-4 border-t border-sidebar-border">
