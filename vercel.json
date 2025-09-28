@@ -28,12 +28,8 @@
       ]
     },
     {
-      "source": "/games/.*\\.wasm\\.br$",
+      "source": "/games/(.*).br$",
       "headers": [
-        {
-          "key": "Content-Type",
-          "value": "application/wasm"
-        },
         {
           "key": "Content-Encoding",
           "value": "br"
@@ -41,33 +37,7 @@
       ]
     },
     {
-      "source": "/games/.*\\.data\\.br$",
-      "headers": [
-        {
-          "key": "Content-Type", 
-          "value": "application/octet-stream"
-        },
-        {
-          "key": "Content-Encoding",
-          "value": "br"
-        }
-      ]
-    },
-    {
-      "source": "/games/.*\\.js\\.br$",
-      "headers": [
-        {
-          "key": "Content-Type",
-          "value": "application/javascript"
-        },
-        {
-          "key": "Content-Encoding",
-          "value": "br"
-        }
-      ]
-    },
-    {
-      "source": "/games/.*\\.wasm$",
+      "source": "/games/(.*).wasm$",
       "headers": [
         {
           "key": "Content-Type",
@@ -76,7 +46,7 @@
       ]
     },
     {
-      "source": "/games/.*\\.data$",
+      "source": "/games/(.*).data$",
       "headers": [
         {
           "key": "Content-Type", 
@@ -85,7 +55,7 @@
       ]
     },
     {
-      "source": "/games/.*\\.js$",
+      "source": "/games/(.*).js$",
       "headers": [
         {
           "key": "Content-Type",
@@ -94,7 +64,7 @@
       ]
     },
     {
-      "source": "/((?!games).*)",
+      "source": "/(.*)",
       "headers": [
         {
           "key": "X-Content-Type-Options",
