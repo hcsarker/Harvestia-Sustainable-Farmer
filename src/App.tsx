@@ -28,6 +28,7 @@ const Privacy = lazy(() => import('./pages/Privacy'));
 const Contact = lazy(() => import('./pages/Contact'));
 const VerifyCertificate = lazy(() => import('./pages/VerifyCertificate'));
 const AdminHealth = lazy(() => import('./pages/admin/AdminHealth'));
+const Debug = lazy(() => import('./pages/Debug'));
 import { useAuth } from "@/hooks/useAuth";
 // Debug overlay removed per request
 
@@ -101,6 +102,7 @@ function AppContent() {
           <Route path="admin/quizzes" element={<QuizAdmin />} />
           <Route path="admin/courses" element={<CourseAdmin />} />
           <Route path="admin/health" element={<AdminHealth />} />
+          <Route path="debug" element={<Debug />} />
           <Route path="*" element={<NotFound />} />
         </Route>
       </Routes>
