@@ -4,6 +4,7 @@ import { Menu, User } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
+import { AudioControls } from "./AudioControls";
 
 interface HeaderProps {
   onMenuClick?: () => void;
@@ -62,23 +63,26 @@ export const Header = ({ onMenuClick }: HeaderProps) => {
         </div>
       </div>
       
-      <Button 
-        variant="outline" 
-        size="icon" 
-        className="rounded-full p-0 h-9 w-9"
-        onClick={handleProfileClick}
-      >
-        {user && !isGuest ? (
-          <Avatar className="h-8 w-8" key={refreshKey}>
-            <AvatarImage src={profile?.avatar_url || undefined} />
-            <AvatarFallback className="text-xs">
-              {getInitials()}
-            </AvatarFallback>
-          </Avatar>
-        ) : (
-          <User className="h-5 w-5" />
-        )}
-      </Button>
+      <div className="flex items-center space-x-2">
+        <AudioControls />
+        <Button 
+          variant="outline" 
+          size="icon" 
+          className="rounded-full p-0 h-9 w-9"
+          onClick={handleProfileClick}
+        >
+          {user && !isGuest ? (
+            <Avatar className="h-8 w-8" key={refreshKey}>
+              <AvatarImage src={profile?.avatar_url || undefined} />
+              <AvatarFallback className="text-xs">
+                {getInitials()}
+              </AvatarFallback>
+            </Avatar>
+          ) : (
+            <User className="h-5 w-5" />
+          )}
+        </Button>
+      </div>
     </header>
   );
 };

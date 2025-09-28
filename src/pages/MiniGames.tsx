@@ -5,6 +5,7 @@ import { GameCard } from "@/components/GameCard"
 import { GameLauncher } from "@/components/GameLauncher"
 import { GameManager } from "@/components/GameManager"
 import { StatsCard } from "@/components/StatsCard"
+import { AudioButton } from "@/components/ui/audio-button"
 import { 
   Gamepad2, 
   Play, 

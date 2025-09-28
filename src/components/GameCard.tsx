@@ -2,6 +2,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { UnityGame } from "@/components/UnityGame"
+import { AudioButton } from "@/components/ui/audio-button"
 import { cn } from "@/lib/utils"
 import { LucideIcon } from "lucide-react"
 import { Clock, Users, Star, Play } from "lucide-react"
@@ -88,14 +89,15 @@ export function GameCard({
             gameUrl={gameUrl}
           />
         ) : (
-          <Button 
+          <AudioButton 
             className="w-full hover:scale-105 transition-transform" 
             size="sm"
             onClick={onClick}
+            soundType="success"
           >
             <Play className="h-4 w-4 mr-2" />
             Play Now
-          </Button>
+          </AudioButton>
         )}
       </CardContent>
     </Card>

@@ -7,10 +7,13 @@ import { ProgressRing } from "@/components/ProgressRing";
 import { AnimatedCounter } from "@/components/AnimatedCounter";
 import { useEffect, useRef, useState } from "react";
 import { Button } from '@/components/ui/button'
+import { AudioButton } from '@/components/ui/audio-button'
+import { useAudio } from '@/contexts/AudioContext'
 import { useLocalWeather } from '@/hooks/useLocalWeather'
 import { useAuth } from '@/hooks/useAuth'
 import { useUserProgress } from '@/hooks/useUserProgress'
 import { useNASAData } from '@/hooks/useNASAData'
+import { useAudioToast } from '@/hooks/use-audio-toast'
 import { 
   Sprout, 
   Droplets, 
@@ -41,6 +44,8 @@ const Index = () => {
   const { achievementsCount, fieldsMonitored, waterEfficiency, sustainabilityScore, conditionsScore, farmHealth } = useDashboardStats()
   const { courseProgress, storyProgress } = useUserProgress()
   const { fetchMODISData, fetchGPMData } = useNASAData()
+  const { successToast, infoToast } = useAudioToast()
+  const { playButtonSound } = useAudio()
   
   // Refs for quick action smooth scroll
   const weatherRef = useRef<HTMLDivElement | null>(null)
@@ -441,22 +446,22 @@ const Index = () => {
             Quick Actions
           </h3>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <button onClick={() => weatherRef.current?.scrollIntoView({ behavior: 'smooth' })} className="flex items-center justify-between p-3 bg-white/50 dark:bg-black/20 rounded-lg hover:bg-white/80 dark:hover:bg-black/40 transition-all duration-300 hover:scale-105 border border-primary/20">
+            <button onClick={() => { playButtonSound(); weatherRef.current?.scrollIntoView({ behavior: 'smooth' }); infoToast('Weather Section', 'Viewing current weather data') }} className="flex items-center justify-between p-3 bg-white/50 dark:bg-black/20 rounded-lg hover:bg-white/80 dark:hover:bg-black/40 transition-all duration-300 hover:scale-105 border border-primary/20">
               <Sun className="h-4 w-4 text-primary" />
               <span className="text-sm font-medium">Weather</span>
               <span className="text-xs text-muted-foreground">{fmt2(currentTemp)}°C{gpmToday != null ? ` · ${fmt2(gpmToday)}mm` : ''}</span>
             </button>
-            <button onClick={() => analyticsRef.current?.scrollIntoView({ behavior: 'smooth' })} className="flex items-center justify-between p-3 bg-white/50 dark:bg-black/20 rounded-lg hover:bg-white/80 dark:hover:bg-black/40 transition-all duration-300 hover:scale-105 border border-accent/20">
+            <button onClick={() => { playButtonSound(); analyticsRef.current?.scrollIntoView({ behavior: 'smooth' }); infoToast('Analytics Section', 'Viewing farm analytics and NDVI data') }} className="flex items-center justify-between p-3 bg-white/50 dark:bg-black/20 rounded-lg hover:bg-white/80 dark:hover:bg-black/40 transition-all duration-300 hover:scale-105 border border-accent/20">
               <BarChart3 className="h-4 w-4 text-accent" />
               <span className="text-sm font-medium">Analytics</span>
               <span className="text-xs text-muted-foreground">{ndviLatest != null ? `NDVI ${fmt2(ndviLatest)}% ${ndviTrend === 'up' ? '↑' : ndviTrend === 'down' ? '↓' : ''}` : '—'}</span>
             </button>
-            <button onClick={() => weatherRef.current?.scrollIntoView({ behavior: 'smooth' })} className="flex items-center justify-between p-3 bg-white/50 dark:bg-black/20 rounded-lg hover:bg-white/80 dark:hover:bg-black/40 transition-all duration-300 hover:scale-105 border border-secondary/20">
+            <button onClick={() => { playButtonSound(); weatherRef.current?.scrollIntoView({ behavior: 'smooth' }); infoToast('Wind Data', 'Checking wind conditions') }} className="flex items-center justify-between p-3 bg-white/50 dark:bg-black/20 rounded-lg hover:bg-white/80 dark:hover:bg-black/40 transition-all duration-300 hover:scale-105 border border-secondary/20">
               <Wind className="h-4 w-4 text-secondary" />
               <span className="text-sm font-medium">Wind</span>
               <span className="text-xs text-muted-foreground">{fmt2(windSpeed)} m/s</span>
             </button>
-            <button onClick={() => farmHealthRef.current?.scrollIntoView({ behavior: 'smooth' })} className="flex items-center justify-between p-3 bg-white/50 dark:bg-black/20 rounded-lg hover:bg-white/80 dark:hover:bg-black/40 transition-all duration-300 hover:scale-105 border border-primary/20">
+            <button onClick={() => { playButtonSound(); farmHealthRef.current?.scrollIntoView({ behavior: 'smooth' }); infoToast('Farm Alerts', `${alertsCount > 0 ? `${alertsCount} alerts found` : 'No alerts currently'}`) }} className="flex items-center justify-between p-3 bg-white/50 dark:bg-black/20 rounded-lg hover:bg-white/80 dark:hover:bg-black/40 transition-all duration-300 hover:scale-105 border border-primary/20">
               <Shield className="h-4 w-4 text-primary" />
               <span className="text-sm font-medium">Alerts</span>
               <span className="text-xs text-muted-foreground">{alertsCount > 0 ? `${alertsCount}` : '0'}</span>

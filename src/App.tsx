@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Outlet } from "react-router-dom";
 import React, { Suspense, lazy } from 'react';
 import { Layout } from "./components/Layout";
+import { AudioProvider } from "./contexts/AudioContext";
 const Index = lazy(() => import('./pages/Index'));
 const StoryJourney = lazy(() => import('./pages/StoryJourney'));
 const Courses = lazy(() => import('./pages/Courses'));
@@ -133,13 +134,15 @@ class AppErrorBoundary extends React.Component<React.PropsWithChildren, { error:
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <AppErrorBoundary>
-        <Suspense fallback={<div className="p-6">Loading...</div>}>
-          <AppContent />
-        </Suspense>
-      </AppErrorBoundary>
+      <AudioProvider>
+        <Toaster />
+        <Sonner />
+        <AppErrorBoundary>
+          <Suspense fallback={<div className="p-6">Loading...</div>}>
+            <AppContent />
+          </Suspense>
+        </AppErrorBoundary>
+      </AudioProvider>
     </TooltipProvider>
   </QueryClientProvider>
 );
