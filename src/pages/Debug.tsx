@@ -7,9 +7,13 @@ import { CheckCircle, XCircle, AlertCircle, RefreshCw } from "lucide-react";
 export default function Debug() {
   const [tests, setTests] = useState([
     { name: 'Main Site', url: 'https://harvestia.vercel.app', status: 'loading' },
+    { name: 'Mini Games Page', url: 'https://harvestia.vercel.app/mini-games', status: 'loading' },
     { name: 'Games Directory', url: 'https://harvestia.vercel.app/games/', status: 'loading' },
     { name: 'Solar Storm Game', url: 'https://harvestia.vercel.app/games/WebGL%20Build%20Solar%20Storm%20Sirvival/index.html', status: 'loading' },
-    { name: 'Smart Farming Game', url: 'https://harvestia.vercel.app/games/WenGL%20Build%20Smart%20Farming%20Sim/index.html', status: 'loading' }
+    { name: 'Smart Farming Game', url: 'https://harvestia.vercel.app/games/WenGL%20Build%20Smart%20Farming%20Sim/index.html', status: 'loading' },
+    { name: 'Solar Storm Framework JS', url: 'https://harvestia.vercel.app/games/WebGL%20Build%20Solar%20Storm%20Sirvival/Build/WebGL%20Build.framework.js.br', status: 'loading' },
+    { name: 'Solar Storm Data File', url: 'https://harvestia.vercel.app/games/WebGL%20Build%20Solar%20Storm%20Sirvival/Build/WebGL%20Build.data.br', status: 'loading' },
+    { name: 'Solar Storm WASM', url: 'https://harvestia.vercel.app/games/WebGL%20Build%20Solar%20Storm%20Sirvival/Build/WebGL%20Build.wasm.br', status: 'loading' }
   ]);
 
   const testUrl = async (url: string) => {
@@ -21,7 +25,35 @@ export default function Debug() {
       return 'success';
     } catch (error) {
       console.error(`Error testing ${url}:`, error);
-      return 'error';
+      try {
+        // Fallback test with GET request
+        const getResponse = await fetch(url, { mode: 'no-cors' });
+        return 'success';
+      } catch (getError) {
+        return 'error';
+      }
+    }
+  };
+
+  const testWithDetails = async (url: string) => {
+    try {
+      const response = await fetch(url, { method: 'HEAD' });
+      const headers = {};
+      response.headers.forEach((value, key) => {
+        headers[key] = value;
+      });
+      return {
+        status: response.status,
+        headers,
+        result: response.ok ? 'success' : 'error'
+      };
+    } catch (error) {
+      return {
+        status: 0,
+        headers: {},
+        result: 'error',
+        error: error.message
+      };
     }
   };
 
@@ -132,6 +164,27 @@ export default function Debug() {
                 Test Smart Farming Direct Link
               </Button>
             </div>
+          </div>
+
+          <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+            <h4 className="font-medium text-green-800 mb-2">Unity WebGL Files Check:</h4>
+            <div className="text-sm space-y-1">
+              <p><strong>Framework JS:</strong> Should have Content-Type: application/javascript</p>
+              <p><strong>Data Files:</strong> Should have Content-Type: application/octet-stream</p>
+              <p><strong>WASM Files:</strong> Should have Content-Type: application/wasm</p>
+              <p><strong>Compressed Files:</strong> Should have Content-Encoding: br</p>
+            </div>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="mt-2"
+              onClick={async () => {
+                const results = await testWithDetails('https://harvestia.vercel.app/games/WebGL%20Build%20Solar%20Storm%20Sirvival/Build/WebGL%20Build.framework.js.br');
+                alert(JSON.stringify(results, null, 2));
+              }}
+            >
+              Check Framework JS Headers
+            </Button>
           </div>
         </CardContent>
       </Card>
