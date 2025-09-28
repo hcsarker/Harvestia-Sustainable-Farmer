@@ -11,7 +11,7 @@
   ],
   "headers": [
     {
-      "source": "/games/.*\\.js\\.br",
+      "source": "/games/(.*).js.br",
       "headers": [
         {
           "key": "Content-Type",
@@ -24,7 +24,7 @@
       ]
     },
     {
-      "source": "/games/.*\\.wasm\\.br",
+      "source": "/games/(.*).wasm.br",
       "headers": [
         {
           "key": "Content-Type",
@@ -37,7 +37,7 @@
       ]
     },
     {
-      "source": "/games/.*\\.data\\.br",
+      "source": "/games/(.*).data.br",
       "headers": [
         {
           "key": "Content-Type", 
@@ -50,7 +50,7 @@
       ]
     },
     {
-      "source": "/games/.*\\.js$",
+      "source": "/games/(.*).js",
       "headers": [
         {
           "key": "Content-Type",
@@ -59,7 +59,7 @@
       ]
     },
     {
-      "source": "/games/.*\\.wasm$",
+      "source": "/games/(.*).wasm",
       "headers": [
         {
           "key": "Content-Type",
@@ -68,7 +68,7 @@
       ]
     },
     {
-      "source": "/games/.*\\.data$",
+      "source": "/games/(.*).data",
       "headers": [
         {
           "key": "Content-Type", 
