@@ -88,7 +88,7 @@ function AppContent() {
           <Route path="courses" element={<Courses />} />
           <Route path="courses/:courseId" element={<CourseDetail />} />
           <Route path="simulation" element={<AgriculturalSimulation />} />
-
+          <Route path="mini-games" element={<MiniGames />} />
           <Route path="facts" element={<Facts />} />
           <Route path="quizzes" element={<Quizzes />} />
           <Route path="quizzes/:quizId" element={<QuizExam />} />
