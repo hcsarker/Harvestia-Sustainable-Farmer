@@ -108,58 +108,34 @@ export default function AdminHealth() {
       list.push({ name: 'user_* tables (requires login)', status: 'skip', detail: 'Login to probe user-scoped tables' })
     }
 
-    // Edge function call example: nasa-data (via supabase client)
+    // Edge function health check: nasa-data (GET request)
     try {
       const t0 = performance.now()
-      const { data, error } = await supabase.functions.invoke('nasa-data', {
-        body: { type: 'ping' }
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co`
+      const response = await fetch(`${supabaseUrl}/functions/v1/nasa-data`, {
+        method: 'GET',
+        headers: {
+          'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+        }
       })
       const t1 = performance.now()
-      list.push({ name: 'Edge: nasa-data', status: error ? 'fail' : 'pass', detail: error ? `${error.name || 'Error'}: ${error.message}` : JSON.stringify(data).slice(0, 120), durationMs: Math.round(t1 - t0) })
+      const data = await response.json()
+      list.push({ 
+        name: 'Edge: nasa-data', 
+        status: response.ok ? 'pass' : 'fail', 
+        detail: response.ok ? JSON.stringify(data).slice(0, 120) : `${response.status}: ${JSON.stringify(data)}`,
+        durationMs: Math.round(t1 - t0) 
+      })
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e)
       list.push({ name: 'Edge: nasa-data', status: 'fail', detail: msg })
     }
 
-    // Edge function call: quiz-handler
-    try {
-      const t0 = performance.now()
-      const { data, error } = await supabase.functions.invoke('quiz-handler', {
-        body: { action: 'ping' }
-      })
-      const t1 = performance.now()
-      list.push({ name: 'Edge: quiz-handler', status: error ? 'fail' : 'pass', detail: error ? `${error.name || 'Error'}: ${error.message}` : JSON.stringify(data).slice(0, 120), durationMs: Math.round(t1 - t0) })
-    } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : String(e)
-      list.push({ name: 'Edge: quiz-handler', status: 'fail', detail: msg })
-    }
 
-    // Edge function call: admin-quiz (admin-gated)
-    try {
-      const t0 = performance.now()
-      const { data, error } = await supabase.functions.invoke('admin-quiz', {
-        body: { action: 'ping' }
-      })
-      const t1 = performance.now()
-      list.push({ name: 'Edge: admin-quiz', status: error ? 'fail' : 'pass', detail: error ? `${error.name || 'Error'}: ${error.message}` : JSON.stringify(data).slice(0, 120), durationMs: Math.round(t1 - t0) })
-    } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : String(e)
-      list.push({ name: 'Edge: admin-quiz', status: 'fail', detail: msg })
-    }
 
-    // Admin whoami diagnostic (with Authorization header if available)
-    try {
-      const sess = await supabase.auth.getSession()
-      const token = sess.data.session?.access_token
-      const headers = token ? { Authorization: `Bearer ${token}` } : undefined
-      const t0 = performance.now()
-      const { data, error } = await supabase.functions.invoke('admin-quiz', { body: { action: 'whoami' }, headers })
-      const t1 = performance.now()
-      list.push({ name: 'Edge: admin-quiz whoami', status: error ? 'fail' : 'pass', detail: error ? `${error.name || 'Error'}: ${error.message}` : JSON.stringify(data), durationMs: Math.round(t1 - t0) })
-    } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : String(e)
-      list.push({ name: 'Edge: admin-quiz whoami', status: 'fail', detail: msg })
-    }
+
+
+
 
     // Storage (avatars) read/write test (upload tiny file then remove)
     if (user) {

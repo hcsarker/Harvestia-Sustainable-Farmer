@@ -38,20 +38,13 @@ async function main() {
     return { status: res.status, body }
   }
 
-  console.log('quiz-handler/ping ->')
-  console.log(await call('quiz-handler', { action: 'ping' }))
-
-  console.log('quiz-handler/whoami ->')
-  console.log(await call('quiz-handler', { action: 'whoami' }))
-
-  console.log('admin-quiz/whoami ->')
-  console.log(await call('admin-quiz', { action: 'whoami' }))
-
-  // Optional admin create (will return Unauthorized if not in allow-list)
-  if (process.env.TRY_CREATE === '1') {
-    console.log('admin-quiz/createQuiz ->')
-    console.log(await call('admin-quiz', { action: 'createQuiz', title: 'Edge Health Demo', difficulty: 'Easy', attempts_allowed: 5 }))
-  }
+  console.log('nasa-data health check ->')
+  const nasaRes = await fetch(`${url}/functions/v1/nasa-data`, {
+    method: 'GET',
+    headers: { apikey: anon }
+  })
+  const nasaBody = await nasaRes.json()
+  console.log({ status: nasaRes.status, body: nasaBody })
 }
 
 main().catch((e) => { console.error(e); process.exit(1) })
