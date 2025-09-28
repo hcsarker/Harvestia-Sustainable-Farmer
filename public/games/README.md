@@ -3,11 +3,12 @@
 ## 📁 Upload Your Unity WebGL Build Files Here:
 
 ### Game 1 Location:
+
 ```
 public/games/game1/
 ├── Build/
 │   ├── YourGame.loader.js
-│   ├── YourGame.framework.js  
+│   ├── YourGame.framework.js
 │   ├── YourGame.data
 │   └── YourGame.wasm
 ├── TemplateData/
@@ -22,6 +23,7 @@ public/games/game1/
 ```
 
 ### Game 2 Location:
+
 ```
 public/games/game2/
 ├── Build/
@@ -47,6 +49,7 @@ public/games/game2/
 ## 🚀 Integration:
 
 After uploading files, the system will automatically:
+
 - Detect your games
 - Create game cards
 - Enable game launching

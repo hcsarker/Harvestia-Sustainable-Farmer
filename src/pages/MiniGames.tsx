@@ -178,7 +178,7 @@ const miniGames = [
     color: "bg-purple-600",
     isUnityGame: true,
     gameId: "solar-storm-survival",
-    gameUrl: "/games/WebGL Build Solar Storm Sirvival/"
+    gameUrl: "/games/WebGL Build Solar Storm Sirvival/index.html"
   },
   {
     id: 11,
@@ -194,7 +194,7 @@ const miniGames = [
     color: "bg-green-700",
     isUnityGame: true,
     gameId: "smart-farming-sim-custom",
-    gameUrl: "/games/WenGL Build Smart Farming Sim/"
+    gameUrl: "/games/WenGL Build Smart Farming Sim/index.html"
   }
 
 ]
@@ -215,10 +215,20 @@ export default function MiniGames() {
         : `${game.title} - Coming Soon! This educational game will be available in the next update.`;
       alert(message);
     } else if (game.gameUrl) {
-      // For Unity games with URLs, open in new tab
-      const confirmOpen = confirm(`${game.title} will open in a new tab. Make sure to allow popups for the best gaming experience!`);
+      // For Unity games with URLs, open in new tab with better window settings
+      const confirmOpen = confirm(`${game.title} will open in a new tab. Make sure to allow popups and WebGL for the best gaming experience!`);
       if (confirmOpen) {
-        window.open(game.gameUrl, '_blank', 'noopener,noreferrer');
+        // Open with specific window features for better Unity game experience
+        const gameWindow = window.open(
+          game.gameUrl, 
+          '_blank', 
+          'noopener,noreferrer,width=1200,height=800,scrollbars=yes,resizable=yes'
+        );
+        
+        // Check if window opened successfully
+        if (!gameWindow || gameWindow.closed || typeof gameWindow.closed == 'undefined') {
+          alert('Popup was blocked! Please allow popups for this site and try again.');
+        }
       }
     } else {
       // Fallback for games without URLs
