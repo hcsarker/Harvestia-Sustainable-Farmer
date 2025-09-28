@@ -79,8 +79,31 @@ export function UnityGameIntegration({
     setHasError(false)
   }
 
-  const toggleFullscreen = () => {
-    setIsFullscreen(!isFullscreen)
+  const toggleFullscreen = async () => {
+    if (!isFullscreen) {
+      try {
+        // Try to enter browser fullscreen
+        const gameContainer = document.querySelector('.unity-game-container')
+        if (gameContainer && gameContainer.requestFullscreen) {
+          await gameContainer.requestFullscreen()
+        } else {
+          // Fallback to CSS fullscreen
+          setIsFullscreen(true)
+        }
+      } catch (e) {
+        // Fallback to CSS fullscreen
+        setIsFullscreen(true)
+      }
+    } else {
+      try {
+        if (document.exitFullscreen) {
+          await document.exitFullscreen()
+        }
+      } catch (e) {
+        console.log('Exit fullscreen failed')
+      }
+      setIsFullscreen(false)
+    }
   }
 
   const toggleMute = () => {
@@ -175,7 +198,7 @@ export function UnityGameIntegration({
                 )}
 
                 {gameStarted && (
-                  <div className="w-full h-full min-h-[600px] bg-black relative overflow-hidden">
+                  <div className="w-full h-full min-h-[600px] bg-black relative overflow-hidden unity-game-container">
                     <iframe
                       src={gameUrl.startsWith('http') ? gameUrl : `${window.location.origin}${gameUrl}`}
                       className="w-full h-full border-0 absolute top-0 left-0"
