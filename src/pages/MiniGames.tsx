@@ -163,6 +163,38 @@ const miniGames = [
     isUnityGame: true,
     gameId: "custom-game",
     gameUrl: "https://imtiazahmeddipto.itch.io/smartfarming"
+  },
+  {
+    id: 10,
+    title: "Solar Storm Survival",
+    description: "Survive intense solar storms in this thrilling space adventure game. Navigate through dangerous cosmic weather and protect your spacecraft!",
+    category: "Unity Game",
+    difficulty: "Hard",
+    duration: "15 min",
+    highScore: 0,
+    players: 0,
+    rating: 5.0,
+    icon: Zap,
+    color: "bg-purple-600",
+    isUnityGame: true,
+    gameId: "solar-storm-survival",
+    gameUrl: "/games/WebGL Build Solar Storm Sirvival/"
+  },
+  {
+    id: 11,
+    title: "Smart Farming Simulator Pro",
+    description: "Advanced farming simulation with modern agricultural techniques. Manage crops, optimize resources, and build a sustainable farm!",
+    category: "Unity Game",
+    difficulty: "Medium",
+    duration: "20 min",
+    highScore: 0,
+    players: 0,
+    rating: 5.0,
+    icon: Target,
+    color: "bg-green-700",
+    isUnityGame: true,
+    gameId: "smart-farming-sim-custom",
+    gameUrl: "/games/WenGL Build Smart Farming Sim/"
   }
 
 ]

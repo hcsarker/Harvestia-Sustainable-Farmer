@@ -1,0 +1,24 @@
+{
+  "games": [
+    {
+      "id": "solar-storm-survival",
+      "title": "Solar Storm Survival",
+      "description": "Survive intense solar storms in this thrilling space adventure game. Navigate through dangerous cosmic weather and protect your spacecraft!",
+      "category": "Unity Game",
+      "difficulty": "Hard",
+      "duration": "15 min",
+      "path": "/games/WebGL Build Solar Storm Sirvival",
+      "enabled": true
+    },
+    {
+      "id": "smart-farming-sim-custom", 
+      "title": "Smart Farming Simulator Pro",
+      "description": "Advanced farming simulation with modern agricultural techniques. Manage crops, optimize resources, and build a sustainable farm!",
+      "category": "Unity Game",
+      "difficulty": "Medium",
+      "duration": "20 min", 
+      "path": "/games/WenGL Build Smart Farming Sim",
+      "enabled": true
+    }
+  ]
+}
