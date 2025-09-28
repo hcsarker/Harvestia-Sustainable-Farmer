@@ -2,6 +2,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { GameCard } from "@/components/GameCard"
+import { GameLauncher } from "@/components/GameLauncher"
+import { GameManager } from "@/components/GameManager"
 import { StatsCard } from "@/components/StatsCard"
 import { 
   Gamepad2, 
@@ -32,7 +34,7 @@ const miniGames = [
     color: "bg-green-600",
     isUnityGame: true,
     gameId: "farming-sim",
-    gameUrl: undefined
+    gameUrl: "https://www.crazygames.com/embed/farmland"
   },
   {
     id: 2,
@@ -48,7 +50,7 @@ const miniGames = [
     color: "bg-green-500",
     isUnityGame: true,
     gameId: "crop-rotation",
-    gameUrl: undefined
+    gameUrl: "https://games.construct.net/426/latest"
   },
   {
     id: 3,
@@ -64,7 +66,7 @@ const miniGames = [
     color: "bg-emerald-500",
     isUnityGame: true,
     gameId: "plant-game",
-    gameUrl: undefined
+    gameUrl: "https://www.addictinggames.com/embed/html5-games/24609"
   },
   {
     id: 4,
@@ -180,12 +182,15 @@ export default function MiniGames() {
         ? `${game.title} - Visit the Quizzes section to test your knowledge!`
         : `${game.title} - Coming Soon! This educational game will be available in the next update.`;
       alert(message);
-    } else if (game.gameId === 'custom-game' && game.gameUrl) {
-      // For itch.io games, open directly in new tab as fallback
-      const confirmOpen = confirm(`${game.title} will open in a new tab. Continue?`);
+    } else if (game.gameUrl) {
+      // For Unity games with URLs, open in new tab
+      const confirmOpen = confirm(`${game.title} will open in a new tab. Make sure to allow popups for the best gaming experience!`);
       if (confirmOpen) {
         window.open(game.gameUrl, '_blank', 'noopener,noreferrer');
       }
+    } else {
+      // Fallback for games without URLs
+      alert(`${game.title} - Game loading functionality coming soon! We're working on integrating more Unity WebGL games.`);
     }
   };
 
@@ -233,35 +238,11 @@ export default function MiniGames() {
         />
       </div>
 
-      <div className="grid gap-6 mb-8">
-        <div>
-          <h2 className="text-xl font-semibold mb-4 flex items-center">
-            <Gamepad2 className="h-5 w-5 mr-2" />
-            Interactive Games
-          </h2>
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {miniGames.map((game, index) => (
-              <GameCard
-                key={game.id}
-                title={game.title}
-                description={game.description}
-                category={game.category}
-                difficulty={game.difficulty}
-                duration={game.duration}
-                highScore={game.highScore}
-                players={game.players}
-                rating={game.rating}
-                icon={game.icon}
-                color={game.color}
-                isUnityGame={game.isUnityGame}
-                gameId={game.gameId}
-                gameUrl={game.gameUrl}
-                onClick={() => handleGameClick(game)}
-              />
-            ))}
-          </div>
-        </div>
-
+      <div className="mb-8">
+        <GameManager
+          games={miniGames}
+          onGameClick={handleGameClick}
+        />
       </div>
     </div>
   )

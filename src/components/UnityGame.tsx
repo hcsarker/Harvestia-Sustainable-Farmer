@@ -34,20 +34,24 @@ export function UnityGame({
   const defaultGames = {
     'crop-rotation': {
       url: 'https://games.construct.net/426/latest',
-      title: 'Crop Rotation Master'
+      title: 'Crop Rotation Master',
+      description: 'Plan your crop rotation strategy for maximum yield'
     },
     'farming-sim': {
-      url: 'https://www.crazygames.com/embed/farmland',
-      title: 'Farming Simulator'
+      url: 'https://www.crazygames.com/embed/farmland', 
+      title: 'Farming Simulator',
+      description: 'Manage your virtual farm with realistic gameplay'
     },
     'plant-game': {
       url: 'https://www.addictinggames.com/embed/html5-games/24609',
-      title: 'Plant Growing Game'
+      title: 'Plant Growing Game',
+      description: 'Grow and nurture plants in this interactive experience'
     },
     'custom-game': {
       url: 'https://v6p9d9t4.ssl.hwcdn.net/html/6566498/index.html',
       title: 'Smart Farming Simulator',
-      fallbackUrl: 'https://imtiazahmeddipto.itch.io/smartfarming'
+      fallbackUrl: 'https://imtiazahmeddipto.itch.io/smartfarming',
+      description: 'Advanced smart farming with IoT and sustainable practices'
     }
   }
 
