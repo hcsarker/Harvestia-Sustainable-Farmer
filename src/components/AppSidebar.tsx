@@ -42,7 +42,7 @@ const mainItems = [
   { title: "Farm Story", url: "/story", icon: Map },
   { title: "Simulation", url: "/simulation", icon: FlaskConical },
   { title: "Courses", url: "/courses", icon: BookOpen },
-  { title: "Mini Games", url: "/games", icon: Gamepad2 },
+  { title: "Mini Games", url: "/mini-games", icon: Gamepad2 },
   { title: "Quizzes", url: "/quizzes", icon: Brain },
   { title: "Profile", url: "/profile", icon: User },
 ]
