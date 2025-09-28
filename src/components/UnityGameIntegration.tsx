@@ -92,7 +92,7 @@ export function UnityGameIntegration({
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className={cn(
-        "max-w-4xl",
+        "max-w-6xl min-h-[700px] w-[90vw]",
         isFullscreen && "max-w-full h-full w-full"
       )}>
         <DialogHeader>
@@ -175,10 +175,11 @@ export function UnityGameIntegration({
                 )}
 
                 {gameStarted && (
-                  <div className="w-full h-full min-h-96 bg-black flex items-center justify-center relative">
+                  <div className="w-full h-full min-h-[600px] bg-black relative overflow-hidden">
                     <iframe
                       src={gameUrl.startsWith('http') ? gameUrl : `${window.location.origin}${gameUrl}`}
-                      className="w-full h-full border-0"
+                      className="w-full h-full border-0 absolute top-0 left-0"
+                      style={{minHeight: '600px', minWidth: '800px'}}
                       title={title}
                       allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                       allowFullScreen
