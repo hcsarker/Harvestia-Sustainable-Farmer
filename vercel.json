@@ -1,29 +1,29 @@
 {
   "rewrites": [
     {
-      "source": "/games/(.*)",
-      "destination": "/games/$1"
-    },
-    {
       "source": "/(.*)",
       "destination": "/index.html"
     }
   ],
   "headers": [
     {
-      "source": "/games/.*",
+      "source": "/games/(.*)",
       "headers": [
         {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000"
+        },
+        {
+          "key": "Access-Control-Allow-Origin",
+          "value": "*"
+        },
+        {
           "key": "Cross-Origin-Embedder-Policy",
-          "value": "require-corp"
+          "value": "unsafe-none"
         },
         {
           "key": "Cross-Origin-Opener-Policy",
-          "value": "same-origin"
-        },
-        {
-          "key": "Cache-Control",
-          "value": "public, max-age=86400"
+          "value": "unsafe-none"
         }
       ]
     },
@@ -51,15 +51,6 @@
         {
           "key": "Content-Type",
           "value": "application/javascript"
-        }
-      ]
-    },
-    {
-      "source": "/games/.*\\.br$",
-      "headers": [
-        {
-          "key": "Content-Encoding",
-          "value": "br"
         }
       ]
     },
