@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { AudioButton } from '@/components/ui/audio-button'
 import { Progress } from '@/components/ui/progress'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Label } from '@/components/ui/label'
@@ -153,10 +154,10 @@ export default function QuizExam() {
             </CardDescription>
           </CardHeader>
           <CardContent className="flex gap-2">
-            <Button variant="outline" onClick={() => navigate('/quizzes')}>Back to Quizzes</Button>
-            <Button onClick={() => { setStaleLoad(false); /* re-trigger by resetting quiz to force getQuiz effect */ setQuiz(null); }}>
+            <AudioButton variant="outline" onClick={() => navigate('/quizzes')} soundType="button">Back to Quizzes</AudioButton>
+            <AudioButton onClick={() => { setStaleLoad(false); /* re-trigger by resetting quiz to force getQuiz effect */ setQuiz(null); }} soundType="notification">
               Retry
-            </Button>
+            </AudioButton>
           </CardContent>
         </Card>
       </div>
@@ -172,7 +173,7 @@ export default function QuizExam() {
             <CardDescription>We couldn't load this quiz. Please go back and try again.</CardDescription>
           </CardHeader>
           <CardContent>
-            <Button variant="outline" onClick={() => navigate('/quizzes')}>Back to Quizzes</Button>
+            <AudioButton variant="outline" onClick={() => navigate('/quizzes')} soundType="button">Back to Quizzes</AudioButton>
           </CardContent>
         </Card>
       </div>
@@ -190,7 +191,7 @@ export default function QuizExam() {
             </h1>
             <p className="text-muted-foreground">You scored {result.score}/{result.total_questions} ({result.percentage}%).</p>
           </div>
-          <Button variant="outline" onClick={() => navigate('/quizzes')}>Back to Quizzes</Button>
+          <AudioButton variant="outline" onClick={() => navigate('/quizzes')} soundType="button">Back to Quizzes</AudioButton>
         </div>
 
         <Card className="mb-6">
@@ -326,16 +327,16 @@ export default function QuizExam() {
           <Separator className="my-6" />
 
           <div className="flex items-center justify-between">
-            <Button variant="outline" onClick={handlePrev} disabled={current === 0}>
+            <AudioButton variant="outline" onClick={handlePrev} disabled={current === 0} soundType="button">
               <ChevronLeft className="h-4 w-4 mr-1" /> Prev
-            </Button>
+            </AudioButton>
             {current < total - 1 ? (
-              <Button onClick={handleNext} disabled={!answers[currentQuestion?.id]}>Next <ChevronRight className="h-4 w-4 ml-1"/></Button>
+              <AudioButton onClick={handleNext} disabled={!answers[currentQuestion?.id]} soundType="button">Next <ChevronRight className="h-4 w-4 ml-1"/></AudioButton>
             ) : (
-              <Button onClick={handleSubmit} disabled={submitting || (typeof quiz.attempts_left === 'number' && quiz.attempts_left <= 0)}>
+              <AudioButton onClick={handleSubmit} disabled={submitting || (typeof quiz.attempts_left === 'number' && quiz.attempts_left <= 0)} soundType="success">
                 {submitting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
                 Submit
-              </Button>
+              </AudioButton>
             )}
           </div>
         </CardContent>

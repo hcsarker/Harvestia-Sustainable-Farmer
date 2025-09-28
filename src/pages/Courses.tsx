@@ -1,5 +1,6 @@
 import React from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { AudioButton } from "@/components/ui/audio-button"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
@@ -121,7 +122,7 @@ export default function Courses() {
           <span className="text-sm text-muted-foreground">Track:</span>
           <div className="flex flex-wrap gap-2">
             {(['All', ...tracks] as Array<'All' | NonNullable<Course['track']>>).map(t => (
-              <Button key={t} size="sm" variant={track === t ? 'default' : 'outline'} onClick={() => setTrack(t)}>{t}</Button>
+              <AudioButton key={t} size="sm" variant={track === t ? 'default' : 'outline'} onClick={() => setTrack(t)} soundType="button">{t}</AudioButton>
             ))}
           </div>
         </div>
@@ -129,7 +130,7 @@ export default function Courses() {
           <span className="text-sm text-muted-foreground">Tag:</span>
           <div className="flex flex-wrap gap-2">
             {(['All', ...tags] as Array<string | 'All'>).map(t => (
-              <Button key={t} size="sm" variant={tag === t ? 'default' : 'outline'} onClick={() => setTag(t)}>{t}</Button>
+              <AudioButton key={t} size="sm" variant={tag === t ? 'default' : 'outline'} onClick={() => setTag(t)} soundType="button">{t}</AudioButton>
             ))}
           </div>
         </div>
@@ -220,22 +221,23 @@ export default function Courses() {
               </div>
               
               <div className="flex items-center space-x-2">
-                <Button onClick={() => navigate(`/courses/${course.id}`)} className="flex-1 bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90 transition-all duration-300">
+                <AudioButton onClick={() => navigate(`/courses/${course.id}`)} className="flex-1 bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90 transition-all duration-300" soundType="button">
                   <Play className="h-4 w-4 mr-2" />
                   {getPct(course.id) > 0 ? 'Continue Learning' : 'Start Course'}
-                </Button>
-                <Button
+                </AudioButton>
+                <AudioButton
                   variant="outline"
                   size="sm"
                   className="hover:scale-105 transition-transform"
                   onClick={() => setPreview({ open: true, course })}
+                  soundType="notification"
                 >
                   Preview
-                </Button>
+                </AudioButton>
                 {course.certificate && (
-                  <Button variant="ghost" size="sm" className="text-primary hover:bg-primary/10">
+                  <AudioButton variant="ghost" size="sm" className="text-primary hover:bg-primary/10" soundType="success">
                     <Award className="h-4 w-4" />
-                  </Button>
+                  </AudioButton>
                 )}
               </div>
             </CardContent>
@@ -272,10 +274,10 @@ export default function Courses() {
                 </ul>
               </div>
               <div className="flex items-center gap-2">
-                <Button onClick={() => { setPreview({ open: false, course: null }); navigate(`/courses/${preview.course?.id}`) }} className="flex-1">
+                <AudioButton onClick={() => { setPreview({ open: false, course: null }); navigate(`/courses/${preview.course?.id}`) }} className="flex-1" soundType="button">
                   <Play className="h-4 w-4 mr-2" /> Start Learning
-                </Button>
-                <Button variant="secondary" onClick={() => setPreview({ open: false, course: null })}>Close</Button>
+                </AudioButton>
+                <AudioButton variant="secondary" onClick={() => setPreview({ open: false, course: null })} soundType="button">Close</AudioButton>
               </div>
             </div>
           )}

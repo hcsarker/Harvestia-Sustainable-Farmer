@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react'
 import { Button } from "@/components/ui/button"
+import { AudioButton } from "@/components/ui/audio-button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -247,12 +248,13 @@ export function GameManager({ games, onGameClick }: GameManagerProps) {
                         </Badge>
                       </div>
                       
-                      <Button 
+                      <AudioButton 
                         onClick={() => handleGameSelect(game)}
                         disabled={!game.isUnityGame && !game.gameUrl}
+                        soundType={game.isUnityGame ? 'button' : 'notification'}
                       >
                         {game.isUnityGame ? 'Play' : 'View'}
-                      </Button>
+                      </AudioButton>
                     </div>
                   </CardContent>
                 </Card>

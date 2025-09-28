@@ -1,11 +1,11 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
+import { AudioButton } from "@/components/ui/audio-button"
+import { Trophy, Loader2 } from "lucide-react"
 import { useNavigate } from 'react-router-dom'
-import { useQuizzesCatalog, type Quiz } from '@/hooks/useQuizzesCatalog'
 import { useAuth } from '@/hooks/useAuth'
-import { Loader2 } from 'lucide-react'
-import { Brain, Trophy } from 'lucide-react'
+import { useQuizzesCatalog, type Quiz } from '@/hooks/useQuizzesCatalog'
+// ...existing code...
 
 export default function Quizzes() {
   const navigate = useNavigate()
@@ -16,7 +16,7 @@ export default function Quizzes() {
     <div className="container py-6">
       <div className="mb-8 animate-fade-in">
         <h1 className="text-3xl font-bold flex items-center">
-          <Brain className="h-7 w-7 mr-3 text-primary" />
+          <Trophy className="h-7 w-7 mr-3 text-primary" />
           Quizzes
         </h1>
         <p className="text-muted-foreground mt-2">Test your knowledge and level up your sustainable farming skills</p>
@@ -82,12 +82,12 @@ export default function Quizzes() {
               )}
               
               {quiz.attempted && (quiz.attempts_left ?? 0) <= 0 ? (
-                <Button className="w-full" variant="outline" size="sm" onClick={() => navigate(`/results`)}>
+                <AudioButton className="w-full" variant="outline" size="sm" soundType="button" onClick={() => navigate(`/results`)}>
                   <Trophy className="h-4 w-4 mr-2" />
                   View Results
-                </Button>
+                </AudioButton>
               ) : (
-                <Button className="w-full" size="sm" onClick={() => {
+                <AudioButton className="w-full" size="sm" soundType="button" onClick={() => {
                   if (!isAuthenticated || isGuest) {
                     navigate('/auth')
                     return
@@ -95,7 +95,7 @@ export default function Quizzes() {
                   navigate(`/quizzes/${quiz.id}`)
                 }}>
                   {quiz.attempted ? 'Retake Quiz' : 'Start Quiz'}
-                </Button>
+                </AudioButton>
               )}
             </CardContent>
           </Card>
