@@ -4,29 +4,6 @@ import { Menu, User, Languages } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
-// Google Translate script loader
-const loadGoogleTranslate = () => {
-  if (document.getElementById('google-translate-script')) return;
-  const script = document.createElement('script');
-  script.id = 'google-translate-script';
-  script.type = 'text/javascript';
-  script.async = true;
-  script.src = 'https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit';
-  document.body.appendChild(script);
-  window.googleTranslateElementInit = function() {
-    new window.google.translate.TranslateElement({
-      pageLanguage: 'en',
-      autoDisplay: false,
-    }, 'google_translate_element');
-  };
-};
-  const [showTranslate, setShowTranslate] = useState(false);
-  const handleTranslateClick = () => {
-    setShowTranslate((prev) => !prev);
-    if (!window.google || !window.google.translate) {
-      loadGoogleTranslate();
-    }
-  };
 import { AudioControls } from "./AudioControls";
 
 interface HeaderProps {
@@ -88,18 +65,7 @@ export const Header = ({ onMenuClick }: HeaderProps) => {
       </div>
 
       <div className="flex items-center space-x-2">
-        <Button
-          variant="ghost"
-          size="icon"
-          aria-label="Translate"
-          onClick={handleTranslateClick}
-        >
-          {/* Use Languages icon from lucide-react, fallback to emoji if not visible */}
-          <span className="text-xl">🌐</span>
-        </Button>
-        {showTranslate && (
-          <div id="google_translate_element" style={{ zIndex: 9999, position: 'absolute', top: '60px', right: '20px' }} />
-        )}
+        {/* Translation button removed */}
         <AudioControls />
         <Button
           variant="outline"
