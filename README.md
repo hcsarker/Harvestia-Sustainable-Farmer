@@ -232,7 +232,7 @@ Contributions welcome! If adding domain logic, aim for framework-agnostic module
 
 ## 15. License
 
-MIT License. See `LICENSE` (add if missing).
+MIT License. See `LICENSE`.
 
 ---
 
