@@ -508,19 +508,27 @@ export default function CourseAdmin() {
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="grid md:grid-cols-3 gap-3">
-              <div className="md:col-span-2">
-                <Label>Lesson Title</Label>
-                <Input value={newLesson.title} onChange={(e) => setNewLesson(s => ({ ...s, title: e.target.value }))} placeholder="Introduction" />
-              </div>
-              <div>
-                <Label>Minutes</Label>
-                <Input type="number" min={1} value={newLesson.duration_minutes}
-                  onChange={(e) => setNewLesson(s => ({ ...s, duration_minutes: Math.max(1, Number(e.target.value || 1)) }))}
-                />
-              </div>
-              <div className="md:col-span-3">
-                <Button onClick={addLesson} disabled={!newLesson.title.trim()}>Add Lesson</Button>
-              </div>
+                <div className="md:col-span-2">
+                  <Label>Lesson Title</Label>
+                  <Input value={newLesson.title} onChange={(e) => setNewLesson(s => ({ ...s, title: e.target.value }))} placeholder="Introduction" />
+                </div>
+                <div>
+                  <Label>Minutes</Label>
+                  <Input type="number" min={1} value={newLesson.duration_minutes}
+                    onChange={(e) => setNewLesson(s => ({ ...s, duration_minutes: Math.max(1, Number(e.target.value || 1)) }))}
+                  />
+                </div>
+                <div className="md:col-span-3">
+                  <Label>Video URL (optional)</Label>
+                  <Input value={newLesson.video_url ?? ''} placeholder="https://www.youtube.com/watch?v=..." onChange={(e) => setNewLesson(s => ({ ...s, video_url: e.target.value }))} />
+                </div>
+                <div className="md:col-span-3">
+                  <Label>Lesson Content (optional, Markdown)</Label>
+                  <Textarea value={newLesson.content ?? ''} onChange={(e) => setNewLesson(s => ({ ...s, content: e.target.value }))} placeholder="Write lesson content here (Markdown supported)" />
+                </div>
+                <div className="md:col-span-3">
+                  <Button onClick={addLesson} disabled={!newLesson.title.trim()}>Add Lesson</Button>
+                </div>
             </div>
             <div className="space-y-2">
               {lessons.map(l => (

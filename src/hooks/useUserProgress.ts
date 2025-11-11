@@ -131,7 +131,7 @@ export const useUserProgress = () => {
           course_id: courseId,
           progress,
           completed: progress >= 100
-        })
+        }, { onConflict: 'user_id,course_id' })
 
       if (error) throw error
 

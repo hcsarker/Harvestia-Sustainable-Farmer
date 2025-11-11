@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams, Link } from 'react-router-dom'
-import { courseCatalog, type Course } from '@/lib/courses'
+import { courseCatalog, type Course, type Lesson } from '@/lib/courses'
+import { supabase } from '@/integrations/supabase/client'
 import { useCoursesCatalog } from '@/hooks/useCoursesCatalog'
 import { useUserProgress } from '@/hooks/useUserProgress'
 import { useAuth } from '@/hooks/useAuth'
@@ -30,6 +31,7 @@ export default function CourseDetail() {
 
   const storageKey = useLessonChecklistKey(user?.id ?? null, courseId || 'unknown')
   const [done, setDone] = useState<Set<string>>(new Set())
+  const [dbLessons, setDbLessons] = useState<Lesson[] | null>(null)
 
   useEffect(() => {
     try {
@@ -44,9 +46,10 @@ export default function CourseDetail() {
   }, [storageKey])
 
   const percent = useMemo(() => {
-    if (!course || course.lessons.length === 0) return 0
-    return Math.round((done.size / course.lessons.length) * 100)
-  }, [course, done])
+    const lessons = dbLessons ?? course?.lessons ?? []
+    if (!course || lessons.length === 0) return 0
+    return Math.round((done.size / lessons.length) * 100)
+  }, [course, done, dbLessons])
 
   // Sync supabase overall progress with local checklist on mount if there's a delta
   useEffect(() => {
@@ -69,20 +72,70 @@ export default function CourseDetail() {
       persist(next)
       // update overall progress
       if (course) {
-        const nextPct = Math.round((next.size / course.lessons.length) * 100)
+        const total = (dbLessons ?? course.lessons).length
+        const nextPct = Math.round((next.size / Math.max(1, total)) * 100)
         updateCourseProgress(course.id, nextPct)
       }
       return next
     })
-  }, [course, persist, updateCourseProgress])
+  }, [course, persist, updateCourseProgress, dbLessons])
 
   const markAll = useCallback(() => {
     if (!course) return
-    const all = new Set(course.lessons.map(l => l.id))
+    const lessons = dbLessons ?? course.lessons
+    const all = new Set(lessons.map(l => l.id))
     setDone(all)
     persist(all)
     updateCourseProgress(course.id, 100)
   }, [course, persist, updateCourseProgress])
+
+  // Load lessons from DB (course_lessons) if available
+  const fetchDbLessons = useCallback(async () => {
+    if (!course) return
+    try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error } = await (supabase as any)
+        .from('course_lessons')
+        .select('id,title,duration_minutes,content,video_url')
+        .eq('course_id', course.id)
+        .order('order_index', { ascending: true })
+      if (error) throw error
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const mapped: Lesson[] = (data || []).map((r: any) => ({ id: r.id, title: r.title, minutes: Number(r.duration_minutes || 0), content: r.content ?? undefined, videoUrl: r.video_url ?? undefined }))
+      setDbLessons(mapped.length ? mapped : null)
+    } catch (e) {
+      // ignore DB lesson load errors; fallback to synthesized/local lessons
+      setDbLessons(null)
+    }
+  }, [course])
+
+  useEffect(() => {
+    let active = true
+    if (!course) return
+    void (async () => {
+      if (!active) return
+      await fetchDbLessons()
+    })()
+
+    // Subscribe to realtime changes for lessons of this course so UI updates automatically
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const channel: any = (supabase as any).channel?.(`course-lessons-${course.id}`)
+      ?.on('postgres_changes', { event: '*', schema: 'public', table: 'course_lessons', filter: `course_id=eq.${course.id}` }, () => {
+        void fetchDbLessons()
+      })
+      ?.subscribe()
+
+    return () => {
+      active = false
+      if (channel && typeof channel.unsubscribe === 'function') {
+        try {
+          channel.unsubscribe()
+        } catch (e) {
+          // ignore unsubscribe errors
+        }
+      }
+    }
+  }, [course, fetchDbLessons])
 
   if (!course) {
     return (
@@ -149,12 +202,20 @@ export default function CourseDetail() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">Lessons</CardTitle>
-          <CardDescription>Tick off lessons as you complete them</CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-lg">Lessons</CardTitle>
+              <CardDescription>Tick off lessons as you complete them</CardDescription>
+            </div>
+            <div className="text-sm text-muted-foreground flex items-center gap-3">
+              <div>{dbLessons ? `Using ${dbLessons.length} lesson(s) from database` : 'Using synthesized/local lessons'}</div>
+              <Button variant="outline" size="sm" onClick={() => void fetchDbLessons()}>Reload lessons</Button>
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
-            {course.lessons.map(lesson => {
+            {(dbLessons ?? course.lessons).map(lesson => {
               const checked = done.has(lesson.id)
               return (
                 <div key={lesson.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/40">
