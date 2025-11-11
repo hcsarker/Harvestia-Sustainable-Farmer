@@ -1,4 +1,4 @@
-export type Lesson = { id: string; title: string; minutes: number }
+export type Lesson = { id: string; title: string; minutes: number; content?: string; videoUrl?: string }
 export type Course = {
   id: string
   title: string
@@ -28,10 +28,10 @@ export const courseCatalog: Course[] = [
     students: 1250,
     certificate: true,
     lessons: [
-      { id: 'sf-1', title: 'Soil Basics', minutes: 12 },
-      { id: 'sf-2', title: 'Crop Rotation', minutes: 14 },
-      { id: 'sf-3', title: 'Composting', minutes: 10 },
-      { id: 'sf-4', title: 'Pest Management', minutes: 16 },
+      { id: 'sf-1', title: 'Soil Basics', minutes: 12, content: 'Introduction to soil composition, structure and why soil health matters for crop productivity.', videoUrl: 'https://www.youtube.com/watch?v=ZFYKf8Y2-cA' },
+      { id: 'sf-2', title: 'Crop Rotation', minutes: 14, content: 'Why rotating crops reduces pests and improves soil nutrients. Examples of rotation plans.', videoUrl: 'https://www.youtube.com/watch?v=3j4F_p6a4oQ' },
+      { id: 'sf-3', title: 'Composting', minutes: 10, content: 'Basics of home and on-farm composting: inputs, process, and application.', videoUrl: 'https://www.youtube.com/watch?v=QmV5j1b5X1M' },
+      { id: 'sf-4', title: 'Pest Management', minutes: 16, content: "Integrated Pest Management principles and safe, low-impact controls.", videoUrl: 'https://www.youtube.com/watch?v=Jw3g0z9b1YQ' },
     ],
   },
   {

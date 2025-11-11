@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, Link } from 'react-router-dom'
 import { courseCatalog, type Course } from '@/lib/courses'
 import { useCoursesCatalog } from '@/hooks/useCoursesCatalog'
 import { useUserProgress } from '@/hooks/useUserProgress'
@@ -160,9 +160,10 @@ export default function CourseDetail() {
                 <div key={lesson.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/40">
                   <div className="flex items-center gap-3">
                     <Checkbox id={lesson.id} checked={checked} onCheckedChange={() => toggleLesson(lesson.id)} />
-                    <label htmlFor={lesson.id} className={`text-sm ${checked ? 'line-through text-muted-foreground' : ''}`}>
+                    {/* title as a link to lesson page; clicking title navigates, checkbox remains separate */}
+                    <Link to={`/courses/${course.id}/lessons/${lesson.id}`} className={`text-sm ${checked ? 'line-through text-muted-foreground' : ''}`}>
                       {lesson.title}
-                    </label>
+                    </Link>
                   </div>
                   <div className="text-xs text-muted-foreground">{lesson.minutes} min</div>
                 </div>

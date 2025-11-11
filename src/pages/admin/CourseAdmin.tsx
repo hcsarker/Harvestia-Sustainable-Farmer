@@ -50,8 +50,10 @@ export default function CourseAdmin() {
   const [editForm, setEditForm] = useState<Editable>(emptyForm)
   const [editQfText, setEditQfText] = useState('')
   const [selectedCourse, setSelectedCourse] = useState<string>('')
-  const [lessons, setLessons] = useState<Array<{ id: string; title: string; duration_minutes: number; order_index: number }>>([])
-  const [newLesson, setNewLesson] = useState<{ title: string; duration_minutes: number }>({ title: '', duration_minutes: 10 })
+  const [lessons, setLessons] = useState<Array<{ id: string; title: string; duration_minutes: number; order_index: number; content?: string | null; video_url?: string | null }>>([])
+  const [newLesson, setNewLesson] = useState<{ title: string; duration_minutes: number; content?: string; video_url?: string }>({ title: '', duration_minutes: 10, content: '', video_url: '' })
+  const [expandedLesson, setExpandedLesson] = useState<string | null>(null)
+  const [previewLesson, setPreviewLesson] = useState<string | null>(null)
   
   const isAdmin = useMemo(() => {
     if (!user || isGuest) return false
@@ -174,7 +176,7 @@ export default function CourseAdmin() {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data, error } = await (supabase as any)
         .from('course_lessons')
-        .select('id,title,duration_minutes,order_index')
+        .select('id,title,duration_minutes,order_index,content,video_url')
         .eq('course_id', selectedCourse)
         .order('order_index', { ascending: true })
       if (error) {
@@ -191,21 +193,28 @@ export default function CourseAdmin() {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data, error } = await (supabase as any)
       .from('course_lessons')
-      .insert({ course_id: selectedCourse, title: newLesson.title.trim(), duration_minutes: Math.max(1, Number(newLesson.duration_minutes || 1)), order_index: lessons.length })
-      .select('id,title,duration_minutes,order_index')
+      .insert({
+        course_id: selectedCourse,
+        title: newLesson.title.trim(),
+        duration_minutes: Math.max(1, Number(newLesson.duration_minutes || 1)),
+        order_index: lessons.length,
+        content: newLesson.content || null,
+        video_url: newLesson.video_url || null,
+      })
+      .select('id,title,duration_minutes,order_index,content,video_url')
       .single()
     if (error) { toast({ variant: 'destructive', title: 'Add lesson failed', description: error.message }); return }
     setLessons(list => [...list, data])
     setNewLesson({ title: '', duration_minutes: 10 })
   }
 
-  const updateLesson = async (id: string, patch: Partial<{ title: string; duration_minutes: number }>) => {
+  const updateLesson = async (id: string, patch: Partial<{ title: string; duration_minutes: number; content?: string | null; video_url?: string | null }>) => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data, error } = await (supabase as any)
       .from('course_lessons')
       .update(patch)
       .eq('id', id)
-      .select('id,title,duration_minutes,order_index')
+      .select('id,title,duration_minutes,order_index,content,video_url')
       .single()
     if (error) { toast({ variant: 'destructive', title: 'Update lesson failed', description: error.message }); return }
     setLessons(list => list.map(l => l.id === id ? data : l))
@@ -515,17 +524,55 @@ export default function CourseAdmin() {
             </div>
             <div className="space-y-2">
               {lessons.map(l => (
-                <div key={l.id} className="flex items-center justify-between border rounded-md p-2">
-                  <div className="flex-1">
-                    <div className="font-medium text-sm">{l.title}</div>
-                    <div className="text-xs text-muted-foreground">{l.duration_minutes} min</div>
+                <div key={l.id} className="border rounded-md p-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1">
+                      <div className="font-medium text-sm">{l.title}</div>
+                      <div className="text-xs text-muted-foreground">{l.duration_minutes} min</div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button size="sm" variant="outline" onClick={() => moveLesson(l.id, -1)}>↑</Button>
+                      <Button size="sm" variant="outline" onClick={() => moveLesson(l.id, 1)}>↓</Button>
+                      <Button size="sm" onClick={() => setExpandedLesson(expandedLesson === l.id ? null : l.id)}>{expandedLesson === l.id ? 'Close' : 'Details'}</Button>
+                      <Button size="sm" onClick={() => setPreviewLesson(previewLesson === l.id ? null : l.id)}>Preview</Button>
+                      <Button size="sm" variant="destructive" onClick={() => deleteLesson(l.id)}>Delete</Button>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Button size="sm" variant="outline" onClick={() => moveLesson(l.id, -1)}>↑</Button>
-                    <Button size="sm" variant="outline" onClick={() => moveLesson(l.id, 1)}>↓</Button>
-                    <Button size="sm" onClick={() => updateLesson(l.id, { title: prompt('New title', l.title) || l.title })}>Edit</Button>
-                    <Button size="sm" variant="destructive" onClick={() => deleteLesson(l.id)}>Delete</Button>
-                  </div>
+
+                  {expandedLesson === l.id && (
+                    <div className="mt-2 grid gap-2">
+                      <div className="md:grid md:grid-cols-3 md:gap-2">
+                        <div className="md:col-span-2">
+                          <Label>Title</Label>
+                          <Input defaultValue={l.title} onBlur={(e) => updateLesson(l.id, { title: e.target.value })} />
+                        </div>
+                        <div>
+                          <Label>Minutes</Label>
+                          <Input type="number" defaultValue={String(l.duration_minutes)} onBlur={(e) => updateLesson(l.id, { duration_minutes: Number(e.target.value || 1) })} />
+                        </div>
+                      </div>
+                      <div>
+                        <Label>Video URL (YouTube)</Label>
+                        <Input defaultValue={l.video_url ?? ''} placeholder="https://www.youtube.com/watch?v=..." onBlur={(e) => updateLesson(l.id, { video_url: e.target.value || null })} />
+                      </div>
+                      <div>
+                        <Label>Lesson Content (Markdown)</Label>
+                        <Textarea defaultValue={l.content ?? ''} onBlur={(e) => updateLesson(l.id, { content: e.target.value || null })} />
+                      </div>
+                    </div>
+                  )}
+
+                  {previewLesson === l.id && (
+                    <div className="mt-2">
+                      {l.video_url ? (
+                        <div className="w-full aspect-video">
+                          <iframe src={`https://www.youtube.com/embed/${(l.video_url || '').includes('watch') ? new URL(l.video_url || '').searchParams.get('v') : (l.video_url || '').split('/').pop()}`} title={l.title} className="w-full h-full" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen />
+                        </div>
+                      ) : (
+                        <div className="text-sm text-muted-foreground">No video set for this lesson.</div>
+                      )}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

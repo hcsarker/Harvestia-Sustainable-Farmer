@@ -10,6 +10,7 @@ const Index = lazy(() => import('./pages/Index'));
 const StoryJourney = lazy(() => import('./pages/StoryJourney'));
 const Courses = lazy(() => import('./pages/Courses'));
 const CourseDetail = lazy(() => import('./pages/CourseDetail'));
+const LessonPage = lazy(() => import('./pages/LessonPage'));
 const AgriculturalSimulation = lazy(() => import('@/pages/AgriculturalSimulation').then(m => ({ default: m.AgriculturalSimulation })));
 const MiniGames = lazy(() => import('./pages/MiniGames'));
 const Facts = lazy(() => import('./pages/Facts'));
@@ -88,6 +89,7 @@ function AppContent() {
           <Route path="story/chapters/:chapterId" element={<ChapterContent />} />
           <Route path="courses" element={<Courses />} />
           <Route path="courses/:courseId" element={<CourseDetail />} />
+          <Route path="courses/:courseId/lessons/:lessonId" element={<LessonPage />} />
           <Route path="simulation" element={<AgriculturalSimulation />} />
           <Route path="mini-games" element={<MiniGames />} />
           <Route path="facts" element={<Facts />} />
