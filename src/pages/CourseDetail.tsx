@@ -87,7 +87,7 @@ export default function CourseDetail() {
     setDone(all)
     persist(all)
     updateCourseProgress(course.id, 100)
-  }, [course, persist, updateCourseProgress])
+  }, [course, persist, updateCourseProgress, dbLessons])
 
   // Load lessons from DB (course_lessons) if available
   const fetchDbLessons = useCallback(async () => {
