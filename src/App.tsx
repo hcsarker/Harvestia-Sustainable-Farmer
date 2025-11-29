@@ -7,6 +7,7 @@ import React, { Suspense, lazy } from 'react';
 import { Layout } from "./components/Layout";
 import { AudioProvider } from "./contexts/AudioContext";
 const Index = lazy(() => import('./pages/Index'));
+const StoryList = lazy(() => import('./pages/StoryList'));
 const StoryJourney = lazy(() => import('./pages/StoryJourney'));
 const Courses = lazy(() => import('./pages/Courses'));
 const CourseDetail = lazy(() => import('./pages/CourseDetail'));
@@ -22,6 +23,7 @@ const Certificates = lazy(() => import('./pages/Certificates'));
 const MyResults = lazy(() => import('./pages/MyResults'));
 const QuizAdmin = lazy(() => import('./pages/admin/QuizAdmin'));
 const CourseAdmin = lazy(() => import('./pages/admin/CourseAdmin'));
+const StoryAdmin = lazy(() => import('./pages/StoryAdmin'));
 const Auth = lazy(() => import('./pages/Auth'));
 const ResetPassword = lazy(() => import('@/pages/ResetPassword'));
 const NotFound = lazy(() => import('./pages/NotFound'));
@@ -85,8 +87,9 @@ function AppContent() {
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/" element={<LayoutWrapper />}>
           <Route index element={<Index />} />
-          <Route path="story" element={<StoryJourney />} />
-          <Route path="story/chapters/:chapterId" element={<ChapterContent />} />
+          <Route path="story" element={<StoryList />} />
+          <Route path="story/:storyId" element={<StoryJourney />} />
+          <Route path="story/:storyId/chapters/:chapterId" element={<ChapterContent />} />
           <Route path="courses" element={<Courses />} />
           <Route path="courses/:courseId" element={<CourseDetail />} />
           <Route path="courses/:courseId/lessons/:lessonId" element={<LessonPage />} />
@@ -104,6 +107,7 @@ function AppContent() {
           <Route path="contact" element={<Contact />} />
           <Route path="admin/quizzes" element={<QuizAdmin />} />
           <Route path="admin/courses" element={<CourseAdmin />} />
+          <Route path="admin/stories" element={<StoryAdmin />} />
           <Route path="admin/health" element={<AdminHealth />} />
 
           <Route path="*" element={<NotFound />} />

@@ -1,5 +1,6 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useEffect, useMemo, useRef, useState } from "react"
-import { useLocation, useNavigate } from "react-router-dom"
+import { useLocation, useNavigate, useParams } from "react-router-dom"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -12,20 +13,39 @@ import {
   Sprout,
   Droplets,
   Sun,
-  Trophy
+  Trophy,
+  Star,
+  Settings,
+  ArrowLeft,
+  BookOpen,
+  Clock
 } from "lucide-react"
 import { supabase } from "@/integrations/supabase/client"
 import { useAuth } from "@/hooks/useAuth"
 import { useUserProgress } from "@/hooks/useUserProgress"
 import { useToast } from "@/hooks/use-toast"
 import NASADataVisualization from "@/components/NASADataVisualization"
+import type { StoryChapter as StoryChapterType } from "@/hooks/useStoryAdmin"
+
+interface Story {
+  id: string
+  title: string
+  description: string
+  image_url?: string
+  difficulty: string
+  estimated_time: string
+  chapters_count: number
+}
 
 export default function StoryJourney() {
+  const { storyId } = useParams()
   const navigate = useNavigate()
   const location = useLocation()
   const { user, isGuest, isAuthenticated, loading } = useAuth()
   const { storyProgress, updateStoryProgress, fetchUserProgress } = useUserProgress()
   const { toast } = useToast()
+  const [story, setStory] = useState<Story | null>(null)
+  const [storyLoading, setStoryLoading] = useState(true)
 
   useEffect(() => {
     // Wait for auth state to resolve; if not authenticated, send to auth with redirect back to this page
@@ -49,17 +69,10 @@ export default function StoryJourney() {
   }, [location.state, fetchUserProgress, toast, navigate, location.pathname])
 
   type ChapterStatus = 'locked' | 'current' | 'completed' | string
-  interface StoryChapter {
-    id: string
-    chapter_number: number
-    title: string
-    description: string
-    duration: string
-    status: ChapterStatus
-  }
-  const [storyChapters, setStoryChapters] = useState<StoryChapter[]>([])
+  const [storyChapters, setStoryChapters] = useState<StoryChapterType[]>([])
   const [chaptersLoading, setChaptersLoading] = useState(true)
   const [openChapterId, setOpenChapterId] = useState<string | null>(null)
+  const [isAdmin, setIsAdmin] = useState(false)
 
   // Local session state for time-based progress
   const [activeChapterId, setActiveChapterId] = useState<string | null>(null)
@@ -68,41 +81,21 @@ export default function StoryJourney() {
   const intervalRef = useRef<number | null>(null)
   const lastSavedProgressRef = useRef<number>(0)
 
-  // Inline, rich content per chapter (can be moved to DB later)
-  const CHAPTER_CONTENT: Record<number, { heading: string; sections: { title: string; text: string }[] }> = useMemo(() => ({
-    1: {
-      heading: "Meet Sarah and the Farm",
-      sections: [
-        { title: "A new beginning", text: "Sarah inherits her grandmother's farm in Green Valley. It's fertile land, but climate patterns have become unpredictable." },
-        { title: "Sustainable mindset", text: "She decides to adopt climate-smart practices: crop rotation, soil moisture monitoring, and efficient irrigation." },
-        { title: "First task", text: "Use satellite NDVI to check crop health and identify fields needing immediate care." },
-      ]
-    },
-    2: {
-      heading: "The Drought Challenge",
-      sections: [
-        { title: "Water scarcity", text: "A prolonged dry spell means every drop counts. Sarah turns to soil moisture data (SMAP)." },
-        { title: "Irrigation planning", text: "She creates a schedule prioritizing stressed fields, while avoiding over-watering." },
-        { title: "Outcome", text: "Water usage drops 20% with no yield penalty." },
-      ]
-    },
-    3: {
-      heading: "Climate Data Analytics",
-      sections: [
-        { title: "Weather windows", text: "Using GPM precipitation and temperature trends, Sarah plans planting windows to avoid extreme heat." },
-        { title: "Risk management", text: "She diversifies crops and uses mulching to protect soils." },
-        { title: "Decision support", text: "Dashboards summarize risk and recommend weekly actions." },
-      ]
-    },
-    4: {
-      heading: "Harvest Success",
-      sections: [
-        { title: "Putting it all together", text: "Sarah integrates NDVI trends, soil moisture, and forecasts to determine the harvest window." },
-        { title: "Community impact", text: "She shares best practices with neighboring farms, improving resilience across the valley." },
-        { title: "You did it!", text: "Completing this chapter unlocks your Story Master badge if all previous chapters are done." },
-      ]
-    },
-  }), [])
+  // Check if user is admin
+  useEffect(() => {
+    const checkAdmin = async () => {
+      if (user) {
+        const { data } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', user.id)
+          .single()
+        
+        setIsAdmin((data as { role?: string })?.role === 'admin')
+      }
+    }
+    checkAdmin()
+  }, [user])
 
   const parseDurationSeconds = (duration: string | undefined) => {
     if (!duration) return 60
@@ -114,28 +107,58 @@ export default function StoryJourney() {
   }
 
   useEffect(() => {
-    const fetchChapters = async () => {
-      console.log('StoryJourney: Fetching story chapters...')
-      const { data, error } = await supabase
-        .from('story_chapters')
-        .select('*')
-        .order('chapter_number')
-
-      console.log('StoryJourney: Chapters result:', { data, error })
-      
-      if (error) {
-        console.error('StoryJourney: Error fetching chapters:', error)
+    const fetchStoryAndChapters = async () => {
+      if (!storyId) {
+        navigate('/story')
+        return
       }
       
-      if (data) {
-        console.log('StoryJourney: Setting chapters:', data.length, 'chapters found')
-        setStoryChapters(data)
+      try {
+        setStoryLoading(true)
+        
+        // Fetch story details
+        const { data: storyData, error: storyError } = await (supabase as any)
+          .from('stories')
+          .select('*')
+          .eq('id', storyId)
+          .single()
+        
+        if (storyError) throw storyError
+        
+        if (storyData) {
+          setStory(storyData as any)
+          
+          // Fetch chapters for this story
+          const { data: chaptersData, error: chaptersError } = await (supabase as any)
+            .from('story_chapters')
+            .select('*')
+            .eq('story_id', storyId)
+            .order('chapter_number')
+          
+          if (chaptersError) throw chaptersError
+          
+          if (chaptersData) {
+            setStoryChapters(chaptersData as any)
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching story:', error)
+        toast({
+          title: 'Error',
+          description: 'Failed to load story details',
+          variant: 'destructive'
+        })
+        navigate('/story')
+      } finally {
+        setStoryLoading(false)
+        setChaptersLoading(false)
       }
-      setChaptersLoading(false)
     }
 
-    fetchChapters()
-  }, [])
+    if (isAuthenticated) {
+      fetchStoryAndChapters()
+    }
+  }, [storyId, isAuthenticated, navigate, toast])
 
   const getUserProgress = useMemo(() => (
     (chapterId: string) => storyProgress.find(p => p.chapter_id === chapterId)
@@ -171,7 +194,7 @@ export default function StoryJourney() {
     sessionStartRef.current = null
   }
 
-  const onCompletedClick = async (chapter: StoryChapter) => {
+  const onCompletedClick = async (chapter: StoryChapterType) => {
     // Ensure freshest state, then focus the next chapter
     await fetchUserProgress()
     const sorted = [...storyChapters].sort((a, b) => a.chapter_number - b.chapter_number)
@@ -186,7 +209,7 @@ export default function StoryJourney() {
     }
   }
 
-  const startSession = (chapter: StoryChapter) => {
+  const startSession = (chapter: StoryChapterType) => {
     const status = effectiveStatusById[chapter.id]
     if (status === 'locked') return
     if (!user && !isGuest) {
@@ -194,10 +217,10 @@ export default function StoryJourney() {
       return
     }
     // Navigate to dedicated chapter content page for richer experience
-    navigate(`/story/chapters/${chapter.id}`)
+    navigate(`/story/${storyId}/chapters/${chapter.id}`)
   }
 
-  const finishNow = async (chapter: StoryChapter) => {
+  const finishNow = async (chapter: StoryChapterType) => {
     // Directly mark complete and return (mostly for demo/testing)
     if (user) {
       await updateStoryProgress(chapter.id, 100, 'completed')
@@ -205,11 +228,23 @@ export default function StoryJourney() {
     toast({ title: `Chapter ${chapter.chapter_number}`, description: "Chapter completed!" })
   }
 
+  const getIconComponent = (iconType?: string) => {
+    switch (iconType) {
+      case 'Droplets': return Droplets
+      case 'Sun': return Sun
+      case 'Trophy': return Trophy
+      case 'MapPin': return MapPin
+      case 'Star': return Star
+      case 'Sprout':
+      default: return Sprout
+    }
+  }
+
   useEffect(() => {
     return () => stopTimer()
   }, [])
 
-  if (loading) {
+  if (loading || storyLoading) {
     return (
       <div className="container py-6">
         <div className="animate-pulse h-6 w-40 bg-muted rounded mb-4" />
@@ -221,7 +256,7 @@ export default function StoryJourney() {
     )
   }
 
-  if (!isAuthenticated) {
+  if (!isAuthenticated || !story) {
     return null
   }
 
@@ -234,11 +269,62 @@ export default function StoryJourney() {
 
   return (
     <div className="container py-6">
+      <div className="mb-6">
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          onClick={() => navigate('/story')}
+          className="mb-4"
+        >
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Back to Stories
+        </Button>
+      </div>
+
+      {/* Story Header */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-foreground">Farm Story Journey</h1>
-        <p className="text-muted-foreground mt-2">
-          Follow Sarah's farming journey and learn sustainable agriculture through interactive storytelling with real NASA data
-        </p>
+        <Card className="overflow-hidden">
+          <div className="md:flex">
+            <div className="md:w-1/3 aspect-video md:aspect-auto bg-gradient-to-br from-emerald-400 to-cyan-500">
+              {story.image_url && (
+                <img 
+                  src={story.image_url} 
+                  alt={story.title}
+                  className="w-full h-full object-cover"
+                />
+              )}
+            </div>
+            <div className="md:w-2/3">
+              <CardHeader>
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <CardTitle className="text-3xl mb-2">{story.title}</CardTitle>
+                    <CardDescription className="text-base">
+                      {story.description}
+                    </CardDescription>
+                  </div>
+                  {isAdmin && (
+                    <Button onClick={() => navigate('/admin/stories')} variant="outline" size="sm">
+                      <Settings className="h-4 w-4 mr-2" />
+                      Manage
+                    </Button>
+                  )}
+                </div>
+                <div className="flex gap-3 mt-4">
+                  <Badge variant="outline" className="flex items-center gap-1">
+                    <BookOpen className="h-3 w-3" />
+                    {storyChapters.length} Chapters
+                  </Badge>
+                  <Badge variant="outline" className="flex items-center gap-1">
+                    <Clock className="h-3 w-3" />
+                    {story.estimated_time}
+                  </Badge>
+                  <Badge variant="secondary">{story.difficulty}</Badge>
+                </div>
+              </CardHeader>
+            </div>
+          </div>
+        </Card>
       </div>
 
       {/* NASA Data Integration Preview */}
@@ -267,14 +353,12 @@ export default function StoryJourney() {
       </div>
 
       <div className="grid gap-6">
-  {storyChapters.map((chapter: StoryChapter) => {
+        {storyChapters.map((chapter: StoryChapterType) => {
           const userProgress = getUserProgress(chapter.id)
           const progress = (progressOverride[chapter.id] ?? userProgress?.progress) || 0
           const status = effectiveStatusById[chapter.id] || userProgress?.status || chapter.status
           
-          const IconComponent = chapter.chapter_number === 1 ? Sprout :
-                              chapter.chapter_number === 2 ? Droplets :
-                              chapter.chapter_number === 3 ? Sun : Trophy
+          const IconComponent = getIconComponent(chapter.icon_type)
           
           return (
             <Card key={chapter.id} id={`chapter-card-${chapter.id}`} className="relative overflow-hidden">

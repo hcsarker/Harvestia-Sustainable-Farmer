@@ -17,21 +17,18 @@ import {
   Map,
   Leaf,
   CloudRain,
-  ThermometerSun
+  ThermometerSun,
+  MapPin,
+  Star
 } from 'lucide-react'
 import NASADataVisualization from '@/components/NASADataVisualization'
 import { useAuth } from '@/hooks/useAuth'
 import { useUserProgress } from '@/hooks/useUserProgress'
 import { supabase } from '@/integrations/supabase/client'
 import { useToast } from '@/hooks/use-toast'
+import type { StoryChapter } from '@/hooks/useStoryAdmin'
 
-type ChapterRow = {
-  id: string
-  chapter_number: number
-  title: string
-  description: string
-  duration: string
-}
+type ChapterRow = StoryChapter
 
 type IconType = ComponentType<SVGProps<SVGSVGElement>>
 const iconByNumber: Record<number, IconType> = {
@@ -41,8 +38,20 @@ const iconByNumber: Record<number, IconType> = {
   4: Trophy,
 }
 
+const getIconComponent = (iconType?: string): IconType => {
+  switch (iconType) {
+    case 'Droplets': return Droplets
+    case 'Sun': return Sun
+    case 'Trophy': return Trophy
+    case 'MapPin': return MapPin
+    case 'Star': return Star
+    case 'Sprout':
+    default: return Sprout
+  }
+}
+
 export default function ChapterContent() {
-  const { chapterId } = useParams()
+  const { storyId, chapterId } = useParams()
   const navigate = useNavigate()
   const { isAuthenticated, loading } = useAuth()
   const { updateStoryProgress, storyProgress } = useUserProgress()
@@ -70,11 +79,13 @@ export default function ChapterContent() {
 
   useEffect(() => {
     if (!loading && !isAuthenticated) {
-      navigate(`/auth?redirect=${encodeURIComponent(`/story/chapters/${chapterId}`)}`)
+      navigate(`/auth?redirect=${encodeURIComponent(`/story/${storyId}/chapters/${chapterId}`)}`)
     }
-  }, [isAuthenticated, loading, navigate, chapterId])
+  }, [isAuthenticated, loading, navigate, storyId, chapterId])
 
-  const Icon = iconByNumber[(chapter?.chapter_number ?? 4) as 1 | 2 | 3 | 4] || Sprout
+  const Icon = chapter?.icon_type 
+    ? getIconComponent(chapter.icon_type)
+    : iconByNumber[(chapter?.chapter_number ?? 4) as 1 | 2 | 3 | 4] || Sprout
 
   // Rich, creative content per chapter
   const content = useMemo(() => {
@@ -243,7 +254,7 @@ export default function ChapterContent() {
   return (
     <div className="container py-6">
       <div className="mb-4 flex items-center gap-3">
-        <Button variant="ghost" size="sm" onClick={() => navigate('/story')}>
+        <Button variant="ghost" size="sm" onClick={() => navigate(`/story/${storyId}`)}>
           <ArrowLeft className="h-4 w-4 mr-1" /> Back to Story
         </Button>
         <Badge variant="secondary">Duration: {chapter.duration}</Badge>

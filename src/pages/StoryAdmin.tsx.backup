@@ -1,0 +1,521 @@
+import React, { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
+import { Switch } from '@/components/ui/switch'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from '@/components/ui/tabs'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
+import { Badge } from '@/components/ui/badge'
+import { Plus, Edit, Trash2, ArrowLeft, BookOpen, List } from 'lucide-react'
+import { useStoryAdmin, type StoryChapter, type CreateStoryChapter } from '@/hooks/useStoryAdmin'
+import { useAuth } from '@/hooks/useAuth'
+import { supabase } from '@/integrations/supabase/client'
+import { useToast } from '@/hooks/use-toast'
+
+const ICON_OPTIONS = ['Sprout', 'Droplets', 'Sun', 'Trophy', 'MapPin', 'Star']
+const DIFFICULTY_OPTIONS = ['Beginner', 'Intermediate', 'Advanced']
+
+interface Story {
+  id: string
+  title: string
+  description: string
+  image_url?: string
+  difficulty: string
+  estimated_time: string
+  chapters_count: number
+  is_published: boolean
+}
+
+interface ChapterSection {
+  title: string
+  text: string
+}
+
+export default function StoryAdmin() {
+  const navigate = useNavigate()
+  const { user, isGuest } = useAuth()
+  const { toast } = useToast()
+  const { loading, fetchStoryChapters, createStoryChapter, updateStoryChapter, deleteStoryChapter } = useStoryAdmin()
+  
+  // Stories state
+  const [stories, setStories] = useState<Story[]>([])
+  const [selectedStoryId, setSelectedStoryId] = useState<string | null>(null)
+  const [isStoryDialogOpen, setIsStoryDialogOpen] = useState(false)
+  const [editingStory, setEditingStory] = useState<Story | null>(null)
+  const [deleteStoryId, setDeleteStoryId] = useState<string | null>(null)
+  const [storyFormData, setStoryFormData] = useState({
+    title: '',
+    description: '',
+    image_url: '',
+    difficulty: 'Beginner',
+    estimated_time: '2 hours',
+    is_published: false
+  })
+  
+  // Chapters state
+  const [chapters, setChapters] = useState<StoryChapter[]>([])
+  const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [editingChapter, setEditingChapter] = useState<StoryChapter | null>(null)
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
+
+  const loadStories = React.useCallback(async () => {
+    const { data, error } = await supabase
+      .from('stories')
+      .select('*')
+      .order('created_at', { ascending: true })
+    
+    if (error) {
+      toast({ title: 'Error', description: 'Failed to load stories', variant: 'destructive' })
+    } else if (data) {
+      setStories(data)
+      if (data.length > 0 && !selectedStoryId) {
+        setSelectedStoryId(data[0].id)
+      }
+    }
+  }, [toast, selectedStoryId])
+
+  const loadChapters = React.useCallback(async (storyId?: string) => {
+    const targetStoryId = storyId || selectedStoryId
+    if (!targetStoryId) return
+    
+    const { data, error } = await supabase
+      .from('story_chapters')
+      .select('*')
+      .eq('story_id', targetStoryId)
+      .order('chapter_number')
+    
+    if (error) {
+      toast({ title: 'Error', description: 'Failed to load chapters', variant: 'destructive' })
+    } else if (data) {
+      setChapters(data as StoryChapter[])
+    }
+  }, [selectedStoryId, toast])
+
+  // Form state
+  const [formData, setFormData] = useState<CreateStoryChapter>({
+    chapter_number: 1,
+    title: '',
+    description: '',
+    duration: '5 min',
+    status: 'locked',
+    icon_type: 'Sprout',
+    content: {
+      heading: '',
+      sections: [{ title: '', text: '' }],
+    },
+  })
+
+  useEffect(() => {
+    if (isGuest) {
+      navigate('/auth')
+      return
+    }
+    loadStories()
+  }, [isGuest, navigate, loadStories])
+
+  useEffect(() => {
+    if (selectedStoryId) {
+      loadChapters(selectedStoryId)
+    }
+  }, [selectedStoryId, loadChapters])
+
+  const handleOpenDialog = (chapter?: StoryChapter) => {
+    if (chapter) {
+      setEditingChapter(chapter)
+      setFormData({
+        chapter_number: chapter.chapter_number,
+        title: chapter.title,
+        description: chapter.description,
+        duration: chapter.duration,
+        status: chapter.status,
+        icon_type: chapter.icon_type || 'Sprout',
+        content: chapter.content || {
+          heading: '',
+          sections: [{ title: '', text: '' }],
+        },
+      })
+    } else {
+      setEditingChapter(null)
+      const nextNumber = chapters.length > 0 ? Math.max(...chapters.map(c => c.chapter_number)) + 1 : 1
+      setFormData({
+        chapter_number: nextNumber,
+        title: '',
+        description: '',
+        duration: '5 min',
+        status: 'locked',
+        icon_type: 'Sprout',
+        content: {
+          heading: '',
+          sections: [{ title: '', text: '' }],
+        },
+      })
+    }
+    setIsDialogOpen(true)
+  }
+
+  const handleCloseDialog = () => {
+    setIsDialogOpen(false)
+    setEditingChapter(null)
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    
+    if (editingChapter) {
+      const result = await updateStoryChapter(editingChapter.id, formData)
+      if (result) {
+        await loadChapters()
+        handleCloseDialog()
+      }
+    } else {
+      const result = await createStoryChapter(formData)
+      if (result) {
+        await loadChapters()
+        handleCloseDialog()
+      }
+    }
+  }
+
+  const handleDelete = async (id: string) => {
+    const success = await deleteStoryChapter(id)
+    if (success) {
+      await loadChapters()
+      setDeleteConfirmId(null)
+    }
+  }
+
+  const addSection = () => {
+    setFormData({
+      ...formData,
+      content: {
+        ...formData.content!,
+        sections: [...formData.content!.sections, { title: '', text: '' }],
+      },
+    })
+  }
+
+  const removeSection = (index: number) => {
+    const newSections = formData.content!.sections.filter((_, i) => i !== index)
+    setFormData({
+      ...formData,
+      content: {
+        ...formData.content!,
+        sections: newSections,
+      },
+    })
+  }
+
+  const updateSection = (index: number, field: keyof ChapterSection, value: string) => {
+    const newSections = [...formData.content!.sections]
+    newSections[index] = { ...newSections[index], [field]: value }
+    setFormData({
+      ...formData,
+      content: {
+        ...formData.content!,
+        sections: newSections,
+      },
+    })
+  }
+
+  return (
+    <div className="container py-6">
+      <div className="mb-6 flex items-center justify-between">
+        <div>
+          <Button variant="ghost" size="sm" onClick={() => navigate('/')} className="mb-2">
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Dashboard
+          </Button>
+          <h1 className="text-3xl font-bold">Story Chapter Management</h1>
+          <p className="text-muted-foreground mt-2">
+            Create, edit, and manage story chapters for the learning journey
+          </p>
+        </div>
+        <Button onClick={() => handleOpenDialog()}>
+          <Plus className="h-4 w-4 mr-2" />
+          Add Chapter
+        </Button>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Story Chapters</CardTitle>
+          <CardDescription>Manage all story chapters in the system</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {loading ? (
+            <div className="text-center py-8">Loading...</div>
+          ) : chapters.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              No chapters found. Create your first chapter to get started.
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-20">Number</TableHead>
+                  <TableHead>Title</TableHead>
+                  <TableHead>Description</TableHead>
+                  <TableHead className="w-24">Duration</TableHead>
+                  <TableHead className="w-24">Icon</TableHead>
+                  <TableHead className="w-24">Status</TableHead>
+                  <TableHead className="w-32 text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {chapters.map((chapter) => (
+                  <TableRow key={chapter.id}>
+                    <TableCell className="font-medium">{chapter.chapter_number}</TableCell>
+                    <TableCell>{chapter.title}</TableCell>
+                    <TableCell className="max-w-md truncate">{chapter.description}</TableCell>
+                    <TableCell>{chapter.duration}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline">{chapter.icon_type || 'Sprout'}</Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={chapter.status === 'completed' ? 'default' : 'secondary'}>
+                        {chapter.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-2">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleOpenDialog(chapter)}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setDeleteConfirmId(chapter.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Add/Edit Dialog */}
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{editingChapter ? 'Edit' : 'Add'} Story Chapter</DialogTitle>
+            <DialogDescription>
+              {editingChapter ? 'Update' : 'Create a new'} story chapter with rich content
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleSubmit}>
+            <div className="space-y-4 py-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="chapter_number">Chapter Number</Label>
+                  <Input
+                    id="chapter_number"
+                    type="number"
+                    value={formData.chapter_number}
+                    onChange={(e) => setFormData({ ...formData, chapter_number: parseInt(e.target.value) })}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="duration">Duration</Label>
+                  <Input
+                    id="duration"
+                    value={formData.duration}
+                    onChange={(e) => setFormData({ ...formData, duration: e.target.value })}
+                    placeholder="e.g., 5 min"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="title">Title</Label>
+                <Input
+                  id="title"
+                  value={formData.title}
+                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="description">Description</Label>
+                <Textarea
+                  id="description"
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  rows={3}
+                  required
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="icon_type">Icon</Label>
+                  <Select
+                    value={formData.icon_type}
+                    onValueChange={(value) => setFormData({ ...formData, icon_type: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {ICON_OPTIONS.map((icon) => (
+                        <SelectItem key={icon} value={icon}>
+                          {icon}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="status">Status</Label>
+                  <Select
+                    value={formData.status}
+                    onValueChange={(value) => setFormData({ ...formData, status: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="locked">Locked</SelectItem>
+                      <SelectItem value="current">Current</SelectItem>
+                      <SelectItem value="completed">Completed</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="heading">Content Heading</Label>
+                <Input
+                  id="heading"
+                  value={formData.content?.heading || ''}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      content: { ...formData.content!, heading: e.target.value },
+                    })
+                  }
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label>Content Sections</Label>
+                  <Button type="button" variant="outline" size="sm" onClick={addSection}>
+                    <Plus className="h-4 w-4 mr-1" />
+                    Add Section
+                  </Button>
+                </div>
+                {formData.content?.sections.map((section, index) => (
+                  <Card key={index} className="p-4">
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <Label>Section {index + 1}</Label>
+                        {formData.content!.sections.length > 1 && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => removeSection(index)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+                      <Input
+                        placeholder="Section title"
+                        value={section.title}
+                        onChange={(e) => updateSection(index, 'title', e.target.value)}
+                        required
+                      />
+                      <Textarea
+                        placeholder="Section content"
+                        value={section.text}
+                        onChange={(e) => updateSection(index, 'text', e.target.value)}
+                        rows={3}
+                        required
+                      />
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={handleCloseDialog}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={loading}>
+                {loading ? 'Saving...' : editingChapter ? 'Update' : 'Create'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={!!deleteConfirmId} onOpenChange={() => setDeleteConfirmId(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirm Delete</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this chapter? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteConfirmId(null)}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => deleteConfirmId && handleDelete(deleteConfirmId)}
+              disabled={loading}
+            >
+              {loading ? 'Deleting...' : 'Delete'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  )
+}

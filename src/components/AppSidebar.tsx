@@ -18,7 +18,8 @@ import {
   X,
   Settings,
   Shield,
-  Activity
+  Activity,
+  BookMarked
 } from "lucide-react"
 import { NavLink, useLocation } from "react-router-dom"
 
@@ -58,6 +59,7 @@ const getQuickItems = () => [
 const adminItems = [
   { title: "Quiz Admin", url: "/admin/quizzes", icon: Brain },
   { title: "Course Admin", url: "/admin/courses", icon: Settings },
+  { title: "Story Admin", url: "/admin/stories", icon: BookMarked },
   { title: "System Health", url: "/admin/health", icon: Activity },
 ]
 
